@@ -1,0 +1,38 @@
+package com.fenghuo1943.tvassistant.input
+
+import com.fenghuo1943.tvassistant.network.TcpClient
+import com.fenghuo1943.tvassistant.network.UdpClient
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class InputSender @Inject constructor(private val tcpClient: TcpClient, private val udpClient: UdpClient) {
+    fun send(packet: InputPacket) {
+        udpClient.send(packet.toBytes())
+    }
+
+    fun sendText(packet: InputPacket) {
+        tcpClient.send(packet.toBytes())
+    }
+    fun keyDown(vk: Int) {
+        val buf = ByteBuffer.allocate(6)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(vk)
+            .putShort(0)
+            .array()
+
+        send(InputPacket(CommandType.KeyDown, buf))
+    }
+
+    fun keyUp(vk: Int) {
+        val buf = ByteBuffer.allocate(6)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(vk)
+            .putShort(0)
+            .array()
+
+        send(InputPacket(CommandType.KeyUp, buf))
+    }
+}

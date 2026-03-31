@@ -1,0 +1,360 @@
+package com.fenghuo1943.tvassistant.ui
+
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fenghuo1943.tvassistant.Device
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.fenghuo1943.tvassistant.ConnectionState
+import com.fenghuo1943.tvassistant.MainViewModel
+import com.fenghuo1943.tvassistant.MouseControlActivity
+import com.fenghuo1943.tvassistant.ui.common.StatusBarStyle
+
+@Composable
+fun MainScreen(
+    onIpChange: (String) -> Unit,
+    vm: MainViewModel = hiltViewModel()
+    ) {
+    var showScanDialog by remember { mutableStateOf(false) }
+    val state by vm::connectionState
+    StatusBarStyle(isLight = true)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5))
+            .statusBarsPadding()   // ✅ 关键！
+            .padding(12.dp)
+    ) {
+        // 🔹 连接卡片
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                TextField(
+                    value = vm.ip,
+                    onValueChange = { vm.ip = it },
+                    placeholder = { Text("输入IP，例如 192.168.1.100") },
+                    colors = androidx.compose.material3.TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF1F3F5),   // 背景（选中）
+                        unfocusedContainerColor = Color(0xFFF1F3F5), // 背景（未选中）
+                        focusedIndicatorColor = Color.Transparent,   // 去掉下划线
+                        unfocusedIndicatorColor = Color.Transparent,
+
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    ),
+
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ConnectionStatus(state)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) // 按钮间距
+                ) {
+                    Button(
+                        onClick = {
+                            when (state) {
+                                ConnectionState.DISCONNECTED, ConnectionState.ERROR -> vm.connectToServer(
+                                    Device(
+                                        vm.ip,
+                                        "PC"
+                                    )
+                                )
+                                ConnectionState.CONNECTED -> vm.disconnect() // 👈 新增
+                                else -> {} // 连接中/重连中不处理
+                            }
+                        },
+                        enabled = state != ConnectionState.CONNECTING &&
+                                state != ConnectionState.RECONNECTING,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = when (state) {
+                                ConnectionState.CONNECTED -> Color(0xFFD32F2F) // 红色（断开）
+                                else -> Color(0xFF1C1C1E) // 默认黑色
+                            },
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            when (state) {
+                                ConnectionState.DISCONNECTED, ConnectionState.ERROR -> "连接电脑"
+                                ConnectionState.CONNECTING -> "连接中..."
+                                ConnectionState.CONNECTED -> "断开连接"
+                                ConnectionState.RECONNECTING -> "重连中..."
+                            }
+                        )
+                    }
+                    Button(
+                        onClick = { showScanDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEFEFEF),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("设备列表")
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        val features = listOf(
+            Feature("🖱", "鼠标", MouseControlActivity::class.java),
+            Feature("📺", "电视时光"),
+            Feature("🌀", "触控板"),
+            Feature("⋯", "更多")
+        )
+        FeatureGrid(features)
+        // 🔹 功能网格
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+//            item { FeatureCard("🖱", "鼠标"){
+//                // 点击打开 MouseControlActivity
+//                context.startActivity(
+//                    Intent(context, MouseControlActivity::class.java)
+//                )
+//            } }
+//            item { FeatureCard("📺", "电视时光") }
+//            item { FeatureCard("🌀", "触控板") }
+//            item { FeatureCard("⋯", "更多") }
+        }
+
+    }
+    //}
+    if (showScanDialog) {
+        LaunchedEffect(Unit) {
+            vm.discoverPC()
+        }
+        ScanDialog(
+            devices = vm.devices,
+            onDismiss = { showScanDialog = false },
+            onDeviceClick = { device ->
+                vm.connectToServer(device)
+                showScanDialog = false
+            },
+            isScanning = vm.isScanning
+        )
+    }
+}
+@Composable
+fun SmallFunctionCard(icon: String, title: String) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.size(80.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFEFEFEF)
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(icon, fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(title, fontSize = 12.sp)
+        }
+    }
+}
+// 功能项数据类
+data class Feature(
+    val icon: String,
+    val title: String,
+    val targetActivity: Class<*>? = null // 点击跳转的页面，可为 null
+)
+@Composable
+fun FeatureGrid(features: List<Feature>) {
+    val context = LocalContext.current
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        items(features) { feature ->
+            FeatureCard(
+                icon = feature.icon,
+                title = feature.title,
+                onClick = {
+                    feature.targetActivity?.let {
+                        context.startActivity(Intent(context, it))
+                    }
+                }
+            )
+        }
+    }
+}
+@Composable
+fun FeatureCard(icon: String, title: String,onClick: () -> Unit = {}) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(140.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+
+            // 图标
+            Text(icon, fontSize = 28.sp)
+
+            // 标题
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+@Composable
+fun ScanDialog(
+    devices: List<Device>,
+    onDismiss: () -> Unit,
+    onDeviceClick: (Device) -> Unit,
+    isScanning: Boolean
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp)
+        ) {
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    when(isScanning){
+                        true->{"正在扫描"}
+                        false->{"扫描完成"}
+                    },
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(devices) { device ->
+                        DeviceItem(device, onDeviceClick)
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun ConnectionStatus(state: ConnectionState) {
+
+    val (text, color) = when (state) {
+        ConnectionState.CONNECTED -> "已连接" to Color(0xFF4CAF50)
+        ConnectionState.CONNECTING -> "连接中..." to Color.Gray
+        ConnectionState.RECONNECTING -> "重连中..." to Color(0xFFFF9800)
+        ConnectionState.DISCONNECTED -> "未连接" to Color.Red
+        ConnectionState.ERROR -> "连接失败" to Color.Red
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(color, shape = CircleShape)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text, color = color, fontSize = 12.sp)
+    }
+}
+@Composable
+fun DeviceItem(
+    device: Device,
+    onClick: (Device) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(device) },
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "💻",
+                fontSize = 24.sp
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(device.name, fontSize = 16.sp)
+                Text(
+                    device.ip,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+            Text(">")
+        }
+    }
+}
