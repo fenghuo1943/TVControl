@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.ui.common
+package com.fenghuo1943.tvcontrol.ui.common
 
 import android.app.Activity
 import androidx.compose.runtime.Composable

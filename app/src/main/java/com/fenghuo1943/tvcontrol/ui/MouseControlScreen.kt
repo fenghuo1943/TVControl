@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.ui
+package com.fenghuo1943.tvcontrol.ui
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -22,16 +22,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import com.fenghuo1943.tvassistant.MainViewModel
+import com.fenghuo1943.tvcontrol.MainViewModel
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.fenghuo1943.tvassistant.input.GestureEngine
-import com.fenghuo1943.tvassistant.input.InputController
-import com.fenghuo1943.tvassistant.input.MouseActions
-import com.fenghuo1943.tvassistant.protocol.MouseActionsImpl
-import com.fenghuo1943.tvassistant.input.MouseButton
-import com.fenghuo1943.tvassistant.ui.common.StatusBarStyle
+import com.fenghuo1943.tvcontrol.input.GestureEngine
+import com.fenghuo1943.tvcontrol.input.InputController
+import com.fenghuo1943.tvcontrol.input.MouseActions
+import com.fenghuo1943.tvcontrol.protocol.MouseActionsImpl
+import com.fenghuo1943.tvcontrol.input.MouseButton
+import com.fenghuo1943.tvcontrol.ui.common.StatusBarStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

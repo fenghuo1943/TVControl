@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant
+package com.fenghuo1943.tvcontrol
 
 data class Device(
     val ip: String,

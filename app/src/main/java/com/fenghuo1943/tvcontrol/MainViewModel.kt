@@ -1,29 +1,23 @@
-package com.fenghuo1943.tvassistant
+package com.fenghuo1943.tvcontrol
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fenghuo1943.tvassistant.input.InputSender
-import com.fenghuo1943.tvassistant.network.DiscoveryService
-import com.fenghuo1943.tvassistant.network.InternalState
-import com.fenghuo1943.tvassistant.network.TcpClient
-import com.fenghuo1943.tvassistant.network.UdpClient
-import com.fenghuo1943.tvassistant.input.InputPacket
-import com.fenghuo1943.tvassistant.ui.components.SnackbarManager
-import com.fenghuo1943.tvassistant.ui.components.SnackbarType
+import com.fenghuo1943.tvcontrol.input.InputSender
+import com.fenghuo1943.tvcontrol.network.DiscoveryService
+import com.fenghuo1943.tvcontrol.network.InternalState
+import com.fenghuo1943.tvcontrol.network.TcpClient
+import com.fenghuo1943.tvcontrol.network.UdpClient
+import com.fenghuo1943.tvcontrol.input.InputPacket
+import com.fenghuo1943.tvcontrol.ui.components.SnackbarManager
+import com.fenghuo1943.tvcontrol.ui.components.SnackbarType
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicInteger
 
 
 @HiltViewModel

@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.ui
+package com.fenghuo1943.tvcontrol.ui
 
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -26,18 +26,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fenghuo1943.tvassistant.Device
+import com.fenghuo1943.tvcontrol.Device
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.fenghuo1943.tvassistant.ConnectionState
-import com.fenghuo1943.tvassistant.MainViewModel
-import com.fenghuo1943.tvassistant.MouseControlActivity
-import com.fenghuo1943.tvassistant.ui.common.StatusBarStyle
+import com.fenghuo1943.tvcontrol.ConnectionState
+import com.fenghuo1943.tvcontrol.MainViewModel
+import com.fenghuo1943.tvcontrol.MouseControlActivity
+import com.fenghuo1943.tvcontrol.ui.common.StatusBarStyle
 
 @Composable
 fun MainScreen(

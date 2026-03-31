@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TVAssistant"
+rootProject.name = "TVControl"
 include(":app")
  

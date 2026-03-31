@@ -1,19 +1,14 @@
-package com.fenghuo1943.tvassistant.ui.common
+package com.fenghuo1943.tvcontrol.ui.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
-import com.fenghuo1943.tvassistant.ui.components.SnackbarEvent
-import com.fenghuo1943.tvassistant.ui.components.SnackbarManager
-import com.fenghuo1943.tvassistant.ui.components.SnackbarType
-import com.fenghuo1943.tvassistant.ui.components.TopSnackbar
+import com.fenghuo1943.tvcontrol.ui.components.SnackbarEvent
+import com.fenghuo1943.tvcontrol.ui.components.SnackbarManager
+import com.fenghuo1943.tvcontrol.ui.components.TopSnackbar
 
 @Composable
 fun AppScaffold(

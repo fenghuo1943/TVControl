@@ -1,10 +1,10 @@
-package com.fenghuo1943.tvassistant.network
+package com.fenghuo1943.tvcontrol.network
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.wifi.WifiManager
 import android.util.Log
-import com.fenghuo1943.tvassistant.Device
+import com.fenghuo1943.tvcontrol.Device
 import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket

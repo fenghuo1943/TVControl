@@ -1,7 +1,6 @@
-package com.fenghuo1943.tvassistant.input
+package com.fenghuo1943.tvcontrol.input
 
-import android.util.Log
-import com.fenghuo1943.tvassistant.ui.KeyboardEvent
+import com.fenghuo1943.tvcontrol.ui.KeyboardEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

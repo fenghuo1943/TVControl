@@ -1,10 +1,10 @@
-package com.fenghuo1943.tvassistant.protocol
+package com.fenghuo1943.tvcontrol.protocol
 
-import com.fenghuo1943.tvassistant.MainViewModel
-import com.fenghuo1943.tvassistant.input.CommandType
-import com.fenghuo1943.tvassistant.input.InputPacket
-import com.fenghuo1943.tvassistant.input.MouseActions
-import com.fenghuo1943.tvassistant.input.MouseButton
+import com.fenghuo1943.tvcontrol.MainViewModel
+import com.fenghuo1943.tvcontrol.input.CommandType
+import com.fenghuo1943.tvcontrol.input.InputPacket
+import com.fenghuo1943.tvcontrol.input.MouseActions
+import com.fenghuo1943.tvcontrol.input.MouseButton
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

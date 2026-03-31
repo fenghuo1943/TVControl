@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.input
+package com.fenghuo1943.tvcontrol.input
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

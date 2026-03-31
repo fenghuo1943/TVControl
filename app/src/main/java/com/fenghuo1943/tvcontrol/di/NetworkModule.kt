@@ -1,8 +1,8 @@
-package com.fenghuo1943.tvassistant.di
+package com.fenghuo1943.tvcontrol.di
 
-import com.fenghuo1943.tvassistant.input.InputSender
-import com.fenghuo1943.tvassistant.network.TcpClient
-import com.fenghuo1943.tvassistant.network.UdpClient
+import com.fenghuo1943.tvcontrol.input.InputSender
+import com.fenghuo1943.tvcontrol.network.TcpClient
+import com.fenghuo1943.tvcontrol.network.UdpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

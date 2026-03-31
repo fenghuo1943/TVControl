@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.fenghuo1943.tvassistant",
+  "applicationId": "com.fenghuo1943.TVControl",
   "variantName": "release",
   "elements": [
     {

@@ -1,11 +1,11 @@
-package com.fenghuo1943.tvassistant.input
+package com.fenghuo1943.tvcontrol.input
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.positionChange
-import com.fenghuo1943.tvassistant.input.GestureConfig.CLICK_THRESHOLD
+import com.fenghuo1943.tvcontrol.input.GestureConfig.CLICK_THRESHOLD
 import kotlinx.coroutines.*
 import kotlin.math.abs
 import kotlin.math.hypot

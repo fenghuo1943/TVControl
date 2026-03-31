@@ -1,7 +1,7 @@
-package com.fenghuo1943.tvassistant.input
+package com.fenghuo1943.tvcontrol.input
 
-import com.fenghuo1943.tvassistant.network.TcpClient
-import com.fenghuo1943.tvassistant.network.UdpClient
+import com.fenghuo1943.tvcontrol.network.TcpClient
+import com.fenghuo1943.tvcontrol.network.UdpClient
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject

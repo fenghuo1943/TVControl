@@ -8,13 +8,13 @@ plugins {
 }
 
 android {
-    namespace = "com.fenghuo1943.tvassistant"
+    namespace = "com.fenghuo1943.tvcontrol"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.fenghuo1943.tvassistant"
+        applicationId = "com.fenghuo1943.tvcontrol"
         minSdk = 30
         targetSdk = 36
         versionCode = 1

@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.ui.theme
+package com.fenghuo1943.tvcontrol.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

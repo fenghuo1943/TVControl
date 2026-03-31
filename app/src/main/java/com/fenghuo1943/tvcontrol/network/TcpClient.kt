@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant.network
+package com.fenghuo1943.tvcontrol.network
 
 import kotlinx.coroutines.*
 import java.io.OutputStream

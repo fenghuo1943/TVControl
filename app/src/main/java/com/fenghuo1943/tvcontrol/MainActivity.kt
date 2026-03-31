@@ -1,4 +1,4 @@
-package com.fenghuo1943.tvassistant
+package com.fenghuo1943.tvcontrol
 
 import android.os.Bundle
 import android.util.Log
@@ -7,11 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.fenghuo1943.tvassistant.network.DiscoveryService
-import com.fenghuo1943.tvassistant.ui.MainScreen
-import com.fenghuo1943.tvassistant.ui.common.AppScaffold
+import com.fenghuo1943.tvcontrol.network.DiscoveryService
+import com.fenghuo1943.tvcontrol.ui.MainScreen
+import com.fenghuo1943.tvcontrol.ui.common.AppScaffold
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

@@ -1,14 +1,10 @@
-package com.fenghuo1943.tvassistant.network
+package com.fenghuo1943.tvcontrol.network
 
-import android.util.Log
-import com.fenghuo1943.tvassistant.input.InputPacket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.net.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
