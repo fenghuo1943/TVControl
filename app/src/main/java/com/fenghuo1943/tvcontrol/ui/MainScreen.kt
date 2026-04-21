@@ -141,7 +141,8 @@ fun MainScreen(
             Feature("🖱", "鼠标", MouseControlActivity::class.java),
             Feature("📺", "电视时光"),
             Feature("🌀", "触控板"),
-            Feature("⋯", "更多")
+            Feature("⋯", "更多"),
+            Feature("🔵", "蓝牙鼠标", com.fenghuo1943.tvcontrol.BluetoothMouseActivity::class.java)
         )
         FeatureGrid(features)
         // 🔹 功能网格

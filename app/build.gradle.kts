@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.material.icons.extended)
     // Hilt 核心
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

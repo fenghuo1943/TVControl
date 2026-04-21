@@ -57,14 +57,14 @@ fun MouseControlScreen(
             .background(Color(0xFFF0F0F0))
             .padding(12.dp)
     ) {
-        MouseTouchArea(
+        BleMouseTouchArea(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
             actions = actions
         )
         Spacer(modifier = Modifier.height(8.dp))
-        MouseButtons(actions = actions)
+        BleMouseButtons(actions = actions)
         Spacer(modifier = Modifier.height(8.dp))
         // 🎮 自定义键盘
         if (showCustomKeyboard) {
@@ -124,7 +124,7 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        MouseButtonItem(
+        BleMouseButtonItem(
             text="左键",
             pressed = MouseButton.Left in pressedButtons,
             onDown = {pressedButtons = pressedButtons + MouseButton.Left
@@ -134,7 +134,7 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
                 pressedButtons = pressedButtons - MouseButton.Left
                 actions.up(MouseButton.Left)
             })
-        MouseButtonItem(text = "中键",
+        BleMouseButtonItem(text = "中键",
             pressed = MouseButton.Middle in pressedButtons,
             onDown = {
                 pressedButtons = pressedButtons - MouseButton.Middle
@@ -145,7 +145,7 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
                 actions.up(MouseButton.Middle)
             }
         )
-        MouseButtonItem(
+        BleMouseButtonItem(
             text = "右键",
             pressed = MouseButton.Right in pressedButtons,
             onDown = {
