@@ -50,7 +50,7 @@ class BleHidService(private val context: Context) {
     var isConnected = false
         private set
     
-    private var deviceName: String = DEFAULT_DEVICE_NAME
+    //private var deviceName: String = DEFAULT_DEVICE_NAME
     
     // 🔹 MAC 地址白名单（为空则允许所有设备）
     private var allowedMacAddresses: MutableSet<String> = mutableSetOf()
