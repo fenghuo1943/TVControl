@@ -1,6 +1,7 @@
 package com.fenghuo1943.tvcontrol.ui
 
 import android.util.Log
+import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -22,9 +23,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import com.fenghuo1943.tvcontrol.MainViewModel
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.fenghuo1943.tvcontrol.input.GestureEngine
 import com.fenghuo1943.tvcontrol.input.InputController
@@ -47,7 +51,29 @@ fun MouseControlScreen(
     var textInput by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val handler = remember { InputController(vm.inputSender, scope) }
+    // 获取系统键盘高度
+    val view = LocalView.current
+    val density = LocalDensity.current
+    var keyboardHeight by remember { mutableStateOf(250.dp) } // 默认值
 
+    DisposableEffect(view) {
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            val rect = android.graphics.Rect()
+            view.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = view.rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+
+            if (keypadHeight > screenHeight * 0.15) {
+                // 如果高度超过屏幕的15%，认为是键盘
+                keyboardHeight = with(density) { keypadHeight.toDp() }
+            }
+        }
+
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose {
+            view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+        }
+    }
 
     StatusBarStyle(isLight = true)
     Column(
@@ -66,11 +92,7 @@ fun MouseControlScreen(
         Spacer(modifier = Modifier.height(8.dp))
         MouseButtons(actions = actions)
         Spacer(modifier = Modifier.height(8.dp))
-        // 🎮 自定义键盘
-        if (showCustomKeyboard) {
-            Spacer(modifier = Modifier.height(8.dp))
-            CustomKeyboard(actions = actions)
-        }
+        
         var requestKeyboard by remember { mutableStateOf(false) }
         KeyboardControlBar(
             onCustomKeyboard = { showCustomKeyboard = !showCustomKeyboard },
@@ -88,6 +110,11 @@ fun MouseControlScreen(
             onEvent = { handler.handle(it)},
             onFocusHandled = { requestKeyboard = false}
         )
+        // 🎮 自定义键盘
+        if (showCustomKeyboard) {
+            Spacer(modifier = Modifier.height(8.dp))
+            CustomKeyboard(actions = actions, keyboardHeight = keyboardHeight)
+        }
     }
 
 
@@ -293,8 +320,14 @@ fun mapKey(key: Key): Int? {
     }
 }
 @Composable
-fun CustomKeyboard(actions: MouseActions) {
-    Column {
+fun CustomKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(keyboardHeight)
+            .background(Color.White, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .padding(16.dp)
+    ) {
 
         Row(horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxWidth()) {
