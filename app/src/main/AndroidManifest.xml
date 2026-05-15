@@ -27,7 +27,8 @@
         </activity>
         <activity android:name=".MouseControlActivity"
             android:exported="true"
-            android:theme="@style/Theme.TVControl"/>
+            android:theme="@style/Theme.TVControl"
+            android:windowSoftInputMode="adjustNothing"/>
     </application>
 
 </manifest>

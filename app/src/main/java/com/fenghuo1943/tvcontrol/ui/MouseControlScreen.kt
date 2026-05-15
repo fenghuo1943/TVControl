@@ -76,13 +76,18 @@ fun MouseControlScreen(
     }
 
     StatusBarStyle(isLight = true)
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .background(Color(0xFFF0F0F0))
-            .padding(12.dp)
     ) {
+        // 主要内容区域（固定布局）
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
         MouseTouchArea(
             modifier = Modifier
                 .weight(1f)
@@ -111,7 +116,14 @@ fun MouseControlScreen(
                 }
             }
         )
-        // ⌨️ 系统键盘输入（隐藏TextField）
+            // 🎮 自定义键盘
+            if (showCustomKeyboard) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CustomKeyboard(actions = actions, keyboardHeight = keyboardHeight)
+            }
+        }
+        
+        // ⌨️ 系统键盘输入（隐藏TextField，放在Box底部，不影响上方布局）
         SystemKeyboardInput(
             text = textInput,
             requestFocus = requestKeyboard,
@@ -119,15 +131,7 @@ fun MouseControlScreen(
             onEvent = { handler.handle(it)},
             onFocusHandled = { requestKeyboard = false}
         )
-        // 🎮 自定义键盘
-        if (showCustomKeyboard) {
-            Spacer(modifier = Modifier.height(8.dp))
-            CustomKeyboard(actions = actions, keyboardHeight = keyboardHeight)
-        }
     }
-
-
-}
 
 @Composable
 fun MouseTouchArea(
