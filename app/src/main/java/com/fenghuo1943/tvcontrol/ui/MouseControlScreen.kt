@@ -94,13 +94,22 @@ fun MouseControlScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         var requestKeyboard by remember { mutableStateOf(false) }
+        val keyboardController = LocalSoftwareKeyboardController.current
         KeyboardControlBar(
-            onCustomKeyboard = { showCustomKeyboard = !showCustomKeyboard },
-            onSystemKeyboard = { requestKeyboard = false
+            onCustomKeyboard = { 
+                // 关闭系统键盘，显示自定义键盘
+                keyboardController?.hide()
+                requestKeyboard = false
+                showCustomKeyboard = true
+            },
+            onSystemKeyboard = { 
+                // 关闭自定义键盘，显示系统键盘
+                showCustomKeyboard = false
                 scope.launch {
                     delay(1)
                     requestKeyboard = true
-                }}
+                }
+            }
         )
         // ⌨️ 系统键盘输入（隐藏TextField）
         SystemKeyboardInput(
