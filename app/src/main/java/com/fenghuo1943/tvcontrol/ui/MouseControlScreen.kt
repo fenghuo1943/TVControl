@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -46,15 +48,21 @@ fun MouseControlScreen(
 
 ) {
 
-    val actions= remember(vm) { MouseActionsImpl(vm) }
+    val actions = remember(vm) { MouseActionsImpl(vm) }
     var showCustomKeyboard by remember { mutableStateOf(false) }
     var textInput by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val handler = remember { InputController(vm.inputSender, scope) }
+    var requestKeyboard by remember { mutableStateOf(false) }
+    
+    // 键盘高度配置
+    val customKeyboardHeight = 250.dp // 自定义键盘固定高度
+    var systemKeyboardHeight by remember { mutableStateOf<Dp?>(null) } // 系统键盘高度（动态检测，用于日志）
+    var isKeyboardVisible by remember { mutableStateOf(false) } // 跟踪是否有键盘显示
+    
     // 获取系统键盘高度
     val view = LocalView.current
     val density = LocalDensity.current
-    var keyboardHeight by remember { mutableStateOf(250.dp) } // 默认值
 
     DisposableEffect(view) {
         val listener = ViewTreeObserver.OnGlobalLayoutListener {
@@ -62,10 +70,22 @@ fun MouseControlScreen(
             view.getWindowVisibleDisplayFrame(rect)
             val screenHeight = view.rootView.height
             val keypadHeight = screenHeight - rect.bottom
+            
+            Log.d("TV", "Screen height: $screenHeight, Visible bottom: ${rect.bottom}, Keypad height: $keypadHeight")
 
             if (keypadHeight > screenHeight * 0.15) {
                 // 如果高度超过屏幕的15%，认为是键盘
-                keyboardHeight = with(density) { keypadHeight.toDp() }
+                val detectedHeight = with(density) { keypadHeight.toDp() }
+                Log.d("TV", "Detected system keyboard height: $detectedHeight")
+                systemKeyboardHeight = detectedHeight
+            } else {
+                Log.d("TV", "System keyboard not detected (height too small)")
+                // 键盘高度为0，说明键盘被收起了
+                if (keypadHeight < screenHeight * 0.05 && requestKeyboard) {
+                    Log.d("TV", "System keyboard dismissed externally, updating state")
+                    requestKeyboard = false
+                    systemKeyboardHeight = null
+                }
             }
         }
 
@@ -74,6 +94,8 @@ fun MouseControlScreen(
             view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
         }
     }
+    
+    // 监听键盘显示状态变化（在 KeyboardControlBar 之前定义）
 
     StatusBarStyle(isLight = true)
     Box(
@@ -88,51 +110,99 @@ fun MouseControlScreen(
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-        MouseTouchArea(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            actions = actions
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        MouseButtons(actions = actions)
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        var requestKeyboard by remember { mutableStateOf(false) }
-        val keyboardController = LocalSoftwareKeyboardController.current
-        KeyboardControlBar(
-            onCustomKeyboard = { 
-                // 关闭系统键盘，显示自定义键盘
-                keyboardController?.hide()
-                requestKeyboard = false
-                showCustomKeyboard = true
-            },
-            onSystemKeyboard = { 
-                // 关闭自定义键盘，显示系统键盘
-                showCustomKeyboard = false
-                scope.launch {
-                    delay(1)
-                    requestKeyboard = true
+            MouseTouchArea(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                actions = actions
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            MouseButtons(actions = actions)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val keyboardController = LocalSoftwareKeyboardController.current
+            
+            // 监听键盘显示状态变化
+            LaunchedEffect(showCustomKeyboard, requestKeyboard) {
+                val wasVisible = isKeyboardVisible
+                isKeyboardVisible = showCustomKeyboard || requestKeyboard
+                
+                Log.d("TV", "Keyboard visibility changed: showCustom=$showCustomKeyboard, requestSystem=$requestKeyboard, isVisible=$isKeyboardVisible")
+                
+                // 如果所有键盘都关闭了，重置系统键盘高度
+                if (!isKeyboardVisible && wasVisible) {
+                    systemKeyboardHeight = null
+                    Log.d("TV", "All keyboards closed, reset system keyboard height")
                 }
             }
-        )
-            // 🎮 自定义键盘
+            
+            KeyboardControlBar(
+                onCustomKeyboard = {
+                    if (showCustomKeyboard) {
+                        // 如果自定义键盘已显示，则关闭它
+                        showCustomKeyboard = false
+                        Log.d("TV", "Hide custom keyboard")
+                    } else {
+                        // 关闭系统键盘，显示自定义键盘
+                        keyboardController?.hide()
+                        requestKeyboard = false
+                        showCustomKeyboard = true
+                        Log.d("TV", "Show custom keyboard with height: $customKeyboardHeight")
+                    }
+                },
+                onSystemKeyboard = {
+                    if (requestKeyboard) {
+                        // 如果系统键盘已显示，则关闭它
+                        requestKeyboard = false
+                        Log.d("TV", "Hide system keyboard")
+                    } else {
+                        // 关闭自定义键盘，显示系统键盘
+                        showCustomKeyboard = false
+                        scope.launch {
+                            delay(1)
+                            requestKeyboard = true
+                        }
+                    }
+                }
+            )
+            
+            // 🎮 自定义键盘区域（仅在显示自定义键盘时占据空间）
             if (showCustomKeyboard) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CustomKeyboard(actions = actions, keyboardHeight = keyboardHeight)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(customKeyboardHeight)
+                ) {
+                    CustomKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+                }
             }
+            
+            // ⌨️ 系统键盘预留空间（仅在显示系统键盘且已检测到高度时占据空间）
+            if (requestKeyboard && systemKeyboardHeight != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(systemKeyboardHeight!!)
+                ) {
+                    // 空 Box，仅用于占据空间，系统键盘会覆盖在此区域上方
+                }
+            }
+            
+            // ⌨️ 系统键盘输入（隐藏TextField）
+            SystemKeyboardInput(
+                text = textInput,
+                requestFocus = requestKeyboard,
+                onTextChange = { run { textInput = it } },
+                onEvent = { handler.handle(it) },
+                onFocusHandled = { }
+            )
         }
-        
-        // ⌨️ 系统键盘输入（隐藏TextField，放在Box底部，不影响上方布局）
-        SystemKeyboardInput(
-            text = textInput,
-            requestFocus = requestKeyboard,
-            onTextChange = { run { textInput = it } },
-            onEvent = { handler.handle(it)},
-            onFocusHandled = { requestKeyboard = false}
-        )
-    }
 
+
+    }
+}
 @Composable
 fun MouseTouchArea(
     modifier: Modifier = Modifier,
@@ -279,6 +349,8 @@ fun SystemKeyboardInput(
     onFocusHandled: () -> Unit // 新增回调
 ) {
     val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
     OutlinedTextField(
         value = text,
         onValueChange = {
@@ -308,13 +380,22 @@ fun SystemKeyboardInput(
                 }
             }
     )
-    val keyboardController = LocalSoftwareKeyboardController.current
+    
     LaunchedEffect(requestFocus) {
         if (requestFocus) {
             delay(100)
             focusRequester.requestFocus()
             keyboardController?.show()
             onFocusHandled()
+            Log.d("TV", "System keyboard shown")
+        }
+    }
+    
+    // 监听 requestFocus 变化，当变为 false 时隐藏键盘
+    LaunchedEffect(requestFocus) {
+        if (!requestFocus) {
+            keyboardController?.hide()
+            Log.d("TV", "System keyboard hidden")
         }
     }
 }
