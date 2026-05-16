@@ -186,39 +186,57 @@ fun MouseControlScreen(
                 }
             )
             
-            // 🎮 自定义键盘区域（仅在显示自定义键盘时占据空间）
-            if (showCustomKeyboard) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(customKeyboardHeight)
-                ) {
-                    CustomKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+            // 🎮 自定义键盘区域（带动画效果）
+            AnimatedVisibility(
+                visible = showCustomKeyboard,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(customKeyboardHeight)
+                    ) {
+                        CustomKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+                    }
                 }
             }
             
-            // 💻 电脑键盘区域（仅在显示电脑键盘时占据空间）
-            if (showComputerKeyboard) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(customKeyboardHeight)
-                ) {
-                    ComputerKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+            // 💻 电脑键盘区域（带动画效果）
+            AnimatedVisibility(
+                visible = showComputerKeyboard,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(customKeyboardHeight)
+                    ) {
+                        ComputerKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+                    }
                 }
             }
             
-            // ⌨️ 系统键盘预留空间（仅在显示系统键盘且已检测到高度时占据空间）
-            if (requestKeyboard && systemKeyboardHeight != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(systemKeyboardHeight!!)
-                ) {
-                    // 空 Box，仅用于占据空间，系统键盘会覆盖在此区域上方
+            // ⌨️ 系统键盘预留空间（带动画效果）
+            AnimatedVisibility(
+                visible = requestKeyboard && systemKeyboardHeight != null,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(systemKeyboardHeight!!)
+                    ) {
+                        // 空 Box，仅用于占据空间，系统键盘会覆盖在此区域上方
+                    }
                 }
             }
             
@@ -516,15 +534,15 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
     ) {
         // 页面切换标签
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(36.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(0) } }) {
+            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(0) } }, modifier = Modifier.height(36.dp)) {
                 Text("字母数字", fontSize = 12.sp, color = if (pagerState.currentPage == 0) Color(0xFF2196F3) else Color.Gray)
             }
             Spacer(modifier = Modifier.width(16.dp))
-            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(1) } }) {
+            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(1) } }, modifier = Modifier.height(36.dp)) {
                 Text("符号功能", fontSize = 12.sp, color = if (pagerState.currentPage == 1) Color(0xFF2196F3) else Color.Gray)
             }
         }
@@ -540,29 +558,23 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
                         
                         (1..9).forEach { i -> ComputerKey(text = "$i", size = smallKeySize, onClick = { actions.keyDown(0x30 + i); actions.keyUp(0x30 + i) }) }
                         ComputerKey(text = "0", size = smallKeySize, onClick = { actions.keyDown(0x30); actions.keyUp(0x30) })
-                        
                         ComputerKey(text = "Back", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                         
                         listOf('Q','W','E','R','T','Y','U','I','O','P').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
-                        ComputerKey(text = "[", size = smallKeySize, onClick = { actions.keyDown(0xDB); actions.keyUp(0xDB) })
-                        ComputerKey(text = "]", size = smallKeySize, onClick = { actions.keyDown(0xDD); actions.keyUp(0xDD) })
-                        ComputerKey(text = "\\", size = smallKeySize, onClick = { actions.keyDown(0xDC); actions.keyUp(0xDC) })
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(modifier = Modifier.width(smallKeySize * 0.5f))
                         listOf('A','S','D','F','G','H','J','K','L').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
-                        
-                        
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        ComputerKey(text = "Shift", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
+                        ComputerKey(text = "Shift", size = smallKeySize * 1.6f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
                         listOf('Z','X','C','V','B','N','M').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
-                        ComputerKey(text = "Enter", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
+                        ComputerKey(text = "Enter", size = smallKeySize * 1.6f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
                         
                     }
                 } else {
