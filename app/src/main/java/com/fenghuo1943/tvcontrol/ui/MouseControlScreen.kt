@@ -8,7 +8,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -31,6 +33,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.fenghuo1943.tvcontrol.input.GestureEngine
 import com.fenghuo1943.tvcontrol.input.InputController
@@ -50,6 +53,7 @@ fun MouseControlScreen(
 
     val actions = remember(vm) { MouseActionsImpl(vm) }
     var showCustomKeyboard by remember { mutableStateOf(false) }
+    var showComputerKeyboard by remember { mutableStateOf(false) }
     var textInput by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val handler = remember { InputController(vm.inputSender, scope) }
@@ -123,11 +127,11 @@ fun MouseControlScreen(
             val keyboardController = LocalSoftwareKeyboardController.current
             
             // 监听键盘显示状态变化
-            LaunchedEffect(showCustomKeyboard, requestKeyboard) {
+            LaunchedEffect(showCustomKeyboard, showComputerKeyboard, requestKeyboard) {
                 val wasVisible = isKeyboardVisible
-                isKeyboardVisible = showCustomKeyboard || requestKeyboard
+                isKeyboardVisible = showCustomKeyboard || showComputerKeyboard || requestKeyboard
                 
-                Log.d("TV", "Keyboard visibility changed: showCustom=$showCustomKeyboard, requestSystem=$requestKeyboard, isVisible=$isKeyboardVisible")
+                Log.d("TV", "Keyboard visibility changed: showCustom=$showCustomKeyboard, showComputer=$showComputerKeyboard, requestSystem=$requestKeyboard, isVisible=$isKeyboardVisible")
                 
                 // 如果所有键盘都关闭了，重置系统键盘高度
                 if (!isKeyboardVisible && wasVisible) {
@@ -143,9 +147,10 @@ fun MouseControlScreen(
                         showCustomKeyboard = false
                         Log.d("TV", "Hide custom keyboard")
                     } else {
-                        // 关闭系统键盘，显示自定义键盘
+                        // 关闭其他键盘，显示自定义键盘
                         keyboardController?.hide()
                         requestKeyboard = false
+                        showComputerKeyboard = false
                         showCustomKeyboard = true
                         Log.d("TV", "Show custom keyboard with height: $customKeyboardHeight")
                     }
@@ -156,12 +161,27 @@ fun MouseControlScreen(
                         requestKeyboard = false
                         Log.d("TV", "Hide system keyboard")
                     } else {
-                        // 关闭自定义键盘，显示系统键盘
+                        // 关闭其他键盘，显示系统键盘
                         showCustomKeyboard = false
+                        showComputerKeyboard = false
                         scope.launch {
                             delay(1)
                             requestKeyboard = true
                         }
+                    }
+                },
+                onComputerKeyboard = {
+                    if (showComputerKeyboard) {
+                        // 如果电脑键盘已显示，则关闭它
+                        showComputerKeyboard = false
+                        Log.d("TV", "Hide computer keyboard")
+                    } else {
+                        // 关闭其他键盘，显示电脑键盘
+                        keyboardController?.hide()
+                        requestKeyboard = false
+                        showCustomKeyboard = false
+                        showComputerKeyboard = true
+                        Log.d("TV", "Show computer keyboard with height: $customKeyboardHeight")
                     }
                 }
             )
@@ -175,6 +195,18 @@ fun MouseControlScreen(
                         .height(customKeyboardHeight)
                 ) {
                     CustomKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+                }
+            }
+            
+            // 💻 电脑键盘区域（仅在显示电脑键盘时占据空间）
+            if (showComputerKeyboard) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(customKeyboardHeight)
+                ) {
+                    ComputerKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
                 }
             }
             
@@ -309,27 +341,36 @@ fun MouseButtonItem(
 @Composable
 fun KeyboardControlBar(
     onCustomKeyboard: () -> Unit,
-    onSystemKeyboard: () -> Unit
+    onSystemKeyboard: () -> Unit,
+    onComputerKeyboard: () -> Unit
 ) {
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // 🎮 自定义键盘按钮
-        Button(
-            onClick = onCustomKeyboard,
-            modifier = Modifier.weight(1f)
-        ) {
-            Text("快捷键键盘")
-        }
-        Spacer(modifier = Modifier.width(8.dp))
         // ⌨️ 系统键盘按钮
         Button(
             onClick = onSystemKeyboard,
             modifier = Modifier.weight(1f)
         ) {
-            Text("系统键盘")
+            Text("输入法")
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        // 💻 电脑键盘按钮
+        Button(
+            onClick = onComputerKeyboard,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("电脑键盘")
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        // 🎮 自定义键盘按钮
+        Button(
+            onClick = onCustomKeyboard,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("快捷键")
         }
     }
 }
@@ -457,5 +498,160 @@ fun CustomKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
                 Text("D")
             }
         }
+    }
+}
+
+@Composable
+fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
+    val smallKeySize = 32.4f.dp
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(keyboardHeight)
+            .background(Color(0xFFE8E8E8), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .padding(8.dp)
+    ) {
+        // 页面切换标签
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(0) } }) {
+                Text("字母数字", fontSize = 12.sp, color = if (pagerState.currentPage == 0) Color(0xFF2196F3) else Color.Gray)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(1) } }) {
+                Text("符号功能", fontSize = 12.sp, color = if (pagerState.currentPage == 1) Color(0xFF2196F3) else Color.Gray)
+            }
+        }
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f)
+        ) { page ->
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (page == 0) {
+                    // 第一页：数字与字母
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        
+                        (1..9).forEach { i -> ComputerKey(text = "$i", size = smallKeySize, onClick = { actions.keyDown(0x30 + i); actions.keyUp(0x30 + i) }) }
+                        ComputerKey(text = "0", size = smallKeySize, onClick = { actions.keyDown(0x30); actions.keyUp(0x30) })
+                        
+                        ComputerKey(text = "Back", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        
+                        listOf('Q','W','E','R','T','Y','U','I','O','P').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        ComputerKey(text = "[", size = smallKeySize, onClick = { actions.keyDown(0xDB); actions.keyUp(0xDB) })
+                        ComputerKey(text = "]", size = smallKeySize, onClick = { actions.keyDown(0xDD); actions.keyUp(0xDD) })
+                        ComputerKey(text = "\\", size = smallKeySize, onClick = { actions.keyDown(0xDC); actions.keyUp(0xDC) })
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(modifier = Modifier.width(smallKeySize * 0.5f))
+                        listOf('A','S','D','F','G','H','J','K','L').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        
+                        
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        ComputerKey(text = "Shift", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
+                        listOf('Z','X','C','V','B','N','M').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        ComputerKey(text = "Enter", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
+                        
+                    }
+                } else {
+                    // 第二页：功能键与符号
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        ComputerKey(text = "Esc", size = smallKeySize, onClick = { actions.keyDown(0x1B); actions.keyUp(0x1B) })
+                        (1..8).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { actions.keyDown(0x6F + i); actions.keyUp(0x6F + i) }) }
+                        ComputerKey(text = "Del", size = smallKeySize, onClick = { actions.keyDown(0x2E); actions.keyUp(0x2E) })
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        (9..12).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { actions.keyDown(0x6F + i); actions.keyUp(0x6F + i) }) }
+                        ComputerKey(text = "`~", size = smallKeySize, onClick = { actions.keyDown(0xC0); actions.keyUp(0xC0) })
+                        ComputerKey(text = "-_", size = smallKeySize, onClick = { actions.keyDown(0xBD); actions.keyUp(0xBD) })
+                        ComputerKey(text = "=+", size = smallKeySize, onClick = { actions.keyDown(0xBB); actions.keyUp(0xBB) })
+                        ComputerKey(text = "[{", size = smallKeySize, onClick = { actions.keyDown(0xDB); actions.keyUp(0xDB) })
+                        ComputerKey(text = "}]", size = smallKeySize, onClick = { actions.keyDown(0xDD); actions.keyUp(0xDD) })
+                        ComputerKey(text = "\\|", size = smallKeySize, onClick = { actions.keyDown(0xDC); actions.keyUp(0xDC) })
+                        
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        listOf('!','@','#','$','%','^','&','*','(',')').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                        ComputerKey(text = ";:", size = smallKeySize, onClick = { actions.keyDown(0xBA); actions.keyUp(0xBA) })
+                        ComputerKey(text = "'\"", size = smallKeySize, onClick = { actions.keyDown(0xDE); actions.keyUp(0xDE) })
+                        ComputerKey(text = ",<", size = smallKeySize, onClick = { actions.keyDown(0xBC); actions.keyUp(0xBC) })
+                        ComputerKey(text = ".>", size = smallKeySize, onClick = { actions.keyDown(0xBE); actions.keyUp(0xBE) })
+                        ComputerKey(text = "/?", size = smallKeySize, onClick = { actions.keyDown(0xBF); actions.keyUp(0xBF) })
+                    }
+                    
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                // 公共底部控制行
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                    
+                    ComputerKey(text = "Esc", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x1B); actions.keyUp(0x1B) })
+                    ComputerKey(text = "Tab", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x09); actions.keyUp(0x09) })
+                    ComputerKey(text = "Caps", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x14); actions.keyUp(0x14) })
+                    ComputerKey(text = "Shift", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
+                    ComputerKey(text = "Enter", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
+                    ComputerKey(text = "Back", size = smallKeySize * 1.0f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
+                    ComputerKey(text = "↑", size = smallKeySize, onClick = { actions.keyDown(0x26); actions.keyUp(0x26) })
+                    ComputerKey(text = "Del", size = smallKeySize, onClick = { actions.keyDown(0x2E); actions.keyUp(0x2E) })
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
+                    ComputerKey(text = "Ctrl", size = smallKeySize, onClick = { actions.keyDown(0x11); actions.keyUp(0x11) })
+                    ComputerKey(text = "Win", size = smallKeySize, onClick = { actions.keyDown(0x5B); actions.keyUp(0x5B) })
+                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { actions.keyDown(0x12); actions.keyUp(0x12) })
+                    ComputerKey(text = "Space", size = smallKeySize * 3.2f, onClick = { actions.keyDown(0x20); actions.keyUp(0x20) })
+                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { actions.keyDown(0x12); actions.keyUp(0x12) })
+                    ComputerKey(text = "←", size = smallKeySize, onClick = { actions.keyDown(0x25); actions.keyUp(0x25) })
+                    ComputerKey(text = "↓", size = smallKeySize, onClick = { actions.keyDown(0x28); actions.keyUp(0x28) })
+                    ComputerKey(text = "→", size = smallKeySize, onClick = { actions.keyDown(0x27); actions.keyUp(0x27) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ComputerKey(
+    text: String,
+    size: Dp,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .width(size)
+            .fillMaxHeight(),
+        shape = RoundedCornerShape(4.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            contentColor = Color.Black
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 0.dp
+        ),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1
+        )
     }
 }
