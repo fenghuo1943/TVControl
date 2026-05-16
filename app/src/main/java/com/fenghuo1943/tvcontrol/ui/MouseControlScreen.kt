@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
@@ -549,7 +550,9 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
 
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            pageSpacing = 8.dp,
+            beyondViewportPageCount = 1
         ) { page ->
             Column(modifier = Modifier.fillMaxSize()) {
                 if (page == 0) {
@@ -618,9 +621,9 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
                     ComputerKey(text = "Caps", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x14); actions.keyUp(0x14) })
                     ComputerKey(text = "Shift", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
                     ComputerKey(text = "Enter", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
-                    ComputerKey(text = "Back", size = smallKeySize * 1.0f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
-                    ComputerKey(text = "↑", size = smallKeySize, onClick = { actions.keyDown(0x26); actions.keyUp(0x26) })
                     ComputerKey(text = "Del", size = smallKeySize, onClick = { actions.keyDown(0x2E); actions.keyUp(0x2E) })
+                    ComputerKey(text = "↑", size = smallKeySize, onClick = { actions.keyDown(0x26); actions.keyUp(0x26) })
+                    ComputerKey(text = "Back", size = smallKeySize * 1.0f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
@@ -644,6 +647,7 @@ fun ComputerKey(
     size: Dp,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -654,10 +658,8 @@ fun ComputerKey(
             containerColor = Color.White,
             contentColor = Color.Black
         ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 0.dp
-        ),
+        elevation = null,
+        interactionSource = interactionSource,
         contentPadding = PaddingValues(0.dp)
     ) {
         Text(
