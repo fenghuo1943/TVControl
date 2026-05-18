@@ -1,5 +1,6 @@
 package com.fenghuo1943.tvcontrol
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +52,9 @@ class MainViewModel @Inject constructor(
     var isScanning by mutableStateOf(false)
     private var isManualDisconnect = false
     private var hasConnectedOnce = false
+    private var connectedIp: String = "" // 记录实际连接成功的IP
+    private var connectingIps: List<String> = emptyList() // 当前正在尝试的IP列表
+    private var connectingIndex: Int = 0 // 当前正在尝试的IP索引
 
     var reconnectAttempts = 0
     private val maxReconnectAttempts = 5
@@ -69,10 +73,16 @@ class MainViewModel @Inject constructor(
                     InternalState.IDLE -> {
                         currentDevice?.connected = false
                         connectionState = ConnectionState.DISCONNECTED
+                        connectedIp = "" // 清空记录的IP
+                        connectingIps = emptyList()
+                        connectingIndex = 0
                     }
                      InternalState.ERROR->{
                          currentDevice?.connected = false
                          connectionState = ConnectionState.ERROR
+                         connectedIp = "" // 清空记录的IP
+                         connectingIps = emptyList()
+                         connectingIndex = 0
                      }
                     InternalState.CONNECTING -> {
                         connectionState = if (connectionState == ConnectionState.RECONNECTING)
@@ -88,14 +98,26 @@ class MainViewModel @Inject constructor(
 
                         currentDevice?.let { device ->
                             device.connected = true
+                            // 使用实际连接的IP
+                            val actualIp = if (connectingIndex >= 0 && connectingIndex < connectingIps.size) {
+                                connectingIps[connectingIndex]
+                            } else {
+                                device.ip
+                            }
+                            connectedIp = actualIp // 记录实际连接的IP
+                            Log.d("TV", "Using IP for display: $actualIp (index=$connectingIndex, list=$connectingIps)")
                             discovery.saveLastDevice(device)
-                            ip = device.ip
-
+                            ip = actualIp
+                            Log.d("TV", "Connected to $ip")
                             SnackbarManager.show(
-                                "已连接 ${device.ip}",
+                                "已连接 $actualIp",
                                 SnackbarType.SUCCESS
                             )
                         }
+                        
+                        // 清空连接状态
+                        connectingIps = emptyList()
+                        connectingIndex = 0
 
                         connectionState =ConnectionState.CONNECTED
                     }
@@ -113,6 +135,9 @@ class MainViewModel @Inject constructor(
                                 SnackbarType.SUCCESS
                             )
                             connectionState =ConnectionState.DISCONNECTED
+                            connectedIp = "" // 清空记录的IP
+                            connectingIps = emptyList()
+                            connectingIndex = 0
                         } else {
                             if (reconnectAttempts < maxReconnectAttempts) {
                                 reconnectAttempts++
@@ -127,6 +152,9 @@ class MainViewModel @Inject constructor(
                                     SnackbarType.ERROR
                                 )
                                 connectionState =ConnectionState.DISCONNECTED
+                                connectedIp = "" // 清空记录的IP
+                                connectingIps = emptyList()
+                                connectingIndex = 0
                             }
                         }
                     }
@@ -156,8 +184,123 @@ class MainViewModel @Inject constructor(
         isManualDisconnect = false
         currentDevice = device
         connectionState = ConnectionState.CONNECTING
-        udpClient.connect(device.ip)
-        tcpClient.connect(device.ip)
+        connectedIp = "" // 清空之前记录的IP
+        
+        // 获取手机WiFi IP
+        val phoneIp = getPhoneWifiIp()
+        
+        // 找到与手机同一网段的IP
+        val sameNetworkIp = findSameNetworkIp(device.ips, phoneIp)
+        
+        val ipsToTry = if (sameNetworkIp != null) {
+            // 优先连接同一网段的IP
+            Log.d("TV", "Found same network IP: $sameNetworkIp")
+            listOf(sameNetworkIp) + device.ips.filter { it != sameNetworkIp }
+        } else {
+            // 没有同一网段的IP，从第一个开始尝试
+            Log.d("TV", "No same network IP found, trying all IPs in order")
+            device.ips
+        }
+        
+        // 保存当前尝试的IP列表
+        connectingIps = ipsToTry
+        connectingIndex = 0
+        
+        // 开始尝试连接
+        attemptConnectWithFallback(device, ipsToTry, 0)
+    }
+    
+    /**
+     * 递归尝试连接多个IP
+     */
+    private fun attemptConnectWithFallback(device: Device, ips: List<String>, index: Int) {
+        if (index >= ips.size) {
+            // 所有IP都失败了
+            Log.d("TV", "All IPs failed")
+            connectionState = ConnectionState.ERROR
+            connectingIps = emptyList()
+            connectingIndex = 0
+            return
+        }
+        
+        val currentIp = ips[index]
+        connectingIndex = index // 更新当前索引
+        Log.d("TV", "Attempting to connect to: $currentIp (${index + 1}/${ips.size})")
+        
+        // 断开之前的连接
+        udpClient.disconnect()
+        tcpClient.disconnect()
+        
+        // 设置超时
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(5000)
+            // 如果5秒后还在连接中，说明超时了
+            if (connectingIndex == index && connectionState == ConnectionState.CONNECTING) {
+                Log.d("TV", "Connection to $currentIp timeout")
+                udpClient.disconnect()
+                tcpClient.disconnect()
+                // 尝试下一个IP
+                attemptConnectWithFallback(device, ips, index + 1)
+            }
+        }
+        
+        // 开始连接
+        udpClient.connect(currentIp)
+        tcpClient.connect(currentIp)
+    }
+    
+    /**
+     * 获取手机WiFi IP地址
+     */
+    private fun getPhoneWifiIp(): String {
+        return try {
+            val wm = discovery.context.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val dhcp = wm.dhcpInfo
+            if (dhcp != null) {
+                intToInetAddress(dhcp.ipAddress)
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ""
+        }
+    }
+    
+    /**
+     * 查找与手机在同一网段的IP
+     */
+    private fun findSameNetworkIp(ips: List<String>, phoneIp: String): String? {
+        if (ips.isEmpty() || phoneIp.isEmpty()) return null
+        
+        val phonePrefix = getNetworkPrefix(phoneIp)
+        
+        for (ip in ips) {
+            if (getNetworkPrefix(ip) == phonePrefix) {
+                return ip
+            }
+        }
+        
+        return null
+    }
+    
+    /**
+     * 获取IP的网络前缀
+     */
+    private fun getNetworkPrefix(ip: String): String {
+        val parts = ip.split(".")
+        if (parts.size >= 3) {
+            return "${parts[0]}.${parts[1]}.${parts[2]}"
+        }
+        return ip
+    }
+    
+    private fun intToInetAddress(hostAddress: Int): String {
+        val bytes = java.nio.ByteBuffer.allocate(4)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .putInt(hostAddress)
+            .array()
+        return java.net.InetAddress.getByAddress(bytes).hostAddress ?: "0.0.0.0"
     }
 
     // =========================
@@ -171,6 +314,9 @@ class MainViewModel @Inject constructor(
         connectionState = ConnectionState.DISCONNECTED
         currentDevice?.connected = false
         currentDevice = null
+        connectedIp = "" // 清空记录的IP
+        connectingIps = emptyList()
+        connectingIndex = 0
     }
 
     // =========================

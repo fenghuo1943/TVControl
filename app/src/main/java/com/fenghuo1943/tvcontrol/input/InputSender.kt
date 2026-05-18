@@ -16,21 +16,21 @@ class InputSender @Inject constructor(private val tcpClient: TcpClient, private 
     fun sendText(packet: InputPacket) {
         tcpClient.send(packet.toBytes())
     }
-    fun keyDown(vk: Int) {
+    fun keyDown(vk: Int, modifier: Int = 0) {
         val buf = ByteBuffer.allocate(6)
             .order(ByteOrder.LITTLE_ENDIAN)
             .putInt(vk)
-            .putShort(0)
+            .putShort(modifier.toShort())
             .array()
 
         send(InputPacket(CommandType.KeyDown, buf))
     }
 
-    fun keyUp(vk: Int) {
+    fun keyUp(vk: Int, modifier: Int = 0) {
         val buf = ByteBuffer.allocate(6)
             .order(ByteOrder.LITTLE_ENDIAN)
             .putInt(vk)
-            .putShort(0)
+            .putShort(modifier.toShort())
             .array()
 
         send(InputPacket(CommandType.KeyUp, buf))

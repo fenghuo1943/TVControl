@@ -92,8 +92,8 @@ fun MainScreen(
                             when (state) {
                                 ConnectionState.DISCONNECTED, ConnectionState.ERROR -> vm.connectToServer(
                                     Device(
-                                        vm.ip,
-                                        "PC"
+                                        ips = listOf(vm.ip),
+                                        name = "PC"
                                     )
                                 )
                                 ConnectionState.CONNECTED -> vm.disconnect() // 👈 新增
@@ -325,6 +325,31 @@ fun DeviceItem(
     device: Device,
     onClick: (Device) -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // 获取手机WiFi IP用于判断同一网段
+    val phoneIp = remember {
+        try {
+            val wm = context.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val dhcp = wm.dhcpInfo
+            if (dhcp != null) {
+                intToInetAddress(dhcp.ipAddress)
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
+    }
+    
+    // 找到与手机同一网段的IP
+    val sameNetworkIp = remember(device.ips, phoneIp) {
+        findSameNetworkIp(device.ips, phoneIp)
+    }
+    
+    // 显示的IP：优先显示同一网段的IP，否则显示第一个IP
+    val displayIp = sameNetworkIp ?: device.ips.firstOrNull() ?: ""
+    
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
@@ -346,14 +371,60 @@ fun DeviceItem(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(device.name, fontSize = 16.sp)
+                Text(device.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    device.ip,
+                    displayIp,
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
+                // 如果有多个IP且不是同一网段，显示提示
+                if (device.ips.size > 1 && sameNetworkIp == null) {
+                    Text(
+                        "${device.ips.size}个IP地址",
+                        fontSize = 10.sp,
+                        color = Color(0xFFFF9800)
+                    )
+                }
+                // 显示操作系统信息
+                if (device.os != "unknown") {
+                    Text(
+                        device.os.uppercase(),
+                        fontSize = 10.sp,
+                        color = Color(0xFF4CAF50)
+                    )
+                }
             }
-            Text(">")
+            Text(">", fontSize = 18.sp)
         }
     }
+}
+
+private fun intToInetAddress(hostAddress: Int): String {
+    val bytes = java.nio.ByteBuffer.allocate(4)
+        .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        .putInt(hostAddress)
+        .array()
+    return java.net.InetAddress.getByAddress(bytes).hostAddress ?: "0.0.0.0"
+}
+
+private fun findSameNetworkIp(ips: List<String>, phoneIp: String): String? {
+    if (ips.isEmpty() || phoneIp.isEmpty()) return null
+    
+    val phonePrefix = getNetworkPrefix(phoneIp)
+    
+    for (ip in ips) {
+        if (getNetworkPrefix(ip) == phonePrefix) {
+            return ip
+        }
+    }
+    
+    return null
+}
+
+private fun getNetworkPrefix(ip: String): String {
+    val parts = ip.split(".")
+    if (parts.size >= 3) {
+        return "${parts[0]}.${parts[1]}.${parts[2]}"
+    }
+    return ip
 }

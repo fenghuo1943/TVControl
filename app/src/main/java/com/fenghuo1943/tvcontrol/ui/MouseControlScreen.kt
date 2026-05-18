@@ -59,6 +59,7 @@ fun MouseControlScreen(
     val scope = rememberCoroutineScope()
     val handler = remember { InputController(vm.inputSender, scope) }
     var requestKeyboard by remember { mutableStateOf(false) }
+    var comboKeyMode by remember { mutableStateOf(false) }
     
     // 键盘高度配置
     val customKeyboardHeight = 250.dp // 自定义键盘固定高度
@@ -218,7 +219,13 @@ fun MouseControlScreen(
                             .fillMaxWidth()
                             .height(customKeyboardHeight)
                     ) {
-                        ComputerKeyboard(actions = actions, keyboardHeight = customKeyboardHeight)
+                        ComputerKeyboard(
+                            handler = handler,
+                            actions = actions, 
+                            keyboardHeight = customKeyboardHeight, 
+                            comboKeyMode = comboKeyMode, 
+                            onComboKeyModeChange = { comboKeyMode = it }
+                        )
                     }
                 }
             }
@@ -234,7 +241,7 @@ fun MouseControlScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(systemKeyboardHeight!!)
+                            .height(systemKeyboardHeight ?: customKeyboardHeight)
                     ) {
                         // 空 Box，仅用于占据空间，系统键盘会覆盖在此区域上方
                     }
@@ -246,7 +253,10 @@ fun MouseControlScreen(
                 text = textInput,
                 requestFocus = requestKeyboard,
                 onTextChange = { run { textInput = it } },
-                onEvent = { handler.handle(it) },
+                onEvent = { 
+                    handler.comboKeyMode = comboKeyMode
+                    handler.handle(it) 
+                },
                 onFocusHandled = { }
             )
         }
@@ -521,10 +531,62 @@ fun CustomKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
 }
 
 @Composable
-fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
+fun ComputerKeyboard(
+    handler: InputController,
+    actions: MouseActions, 
+    keyboardHeight: Dp = 250.dp,
+    comboKeyMode: Boolean = false,
+    onComboKeyModeChange: (Boolean) -> Unit = {}
+) {
     val smallKeySize = 32.4f.dp
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val scope = rememberCoroutineScope()
+    
+    // 跟踪修饰键的按下状态
+    var modifierKeysState by remember { mutableStateOf(setOf<Int>()) }
+    
+    // 当组合键模式关闭时，清除所有修饰键状态
+    LaunchedEffect(comboKeyMode) {
+        if (!comboKeyMode && modifierKeysState.isNotEmpty()) {
+            // 发送所有修饰键的弹起事件
+            modifierKeysState.forEach { keyCode ->
+                handler.handle(KeyboardEvent.KeyUp(keyCode))
+            }
+            modifierKeysState = emptySet()
+        }
+    }
+    
+    // 辅助函数：发送普通键盘事件
+    val sendKey = { keyCode: Int ->
+        handler.handle(KeyboardEvent.KeyDown(keyCode))
+        handler.handle(KeyboardEvent.KeyUp(keyCode))
+        // 在组合键模式下，发送非修饰键后清除所有修饰键的UI状态
+        if (comboKeyMode && modifierKeysState.isNotEmpty()) {
+            modifierKeysState.forEach { keyCode ->
+                handler.handle(KeyboardEvent.KeyUp(keyCode))
+            }
+            modifierKeysState = emptySet()
+        }
+    }
+    
+    // 辅助函数：切换修饰键状态
+    val toggleModifierKey = { keyCode: Int ->
+        if (comboKeyMode) {
+            if (keyCode in modifierKeysState) {
+                // 如果已经按下，则弹起
+                modifierKeysState = modifierKeysState - keyCode
+                handler.handle(KeyboardEvent.KeyUp(keyCode))
+            } else {
+                // 如果未按下，则按下
+                modifierKeysState = modifierKeysState + keyCode
+                handler.handle(KeyboardEvent.KeyDown(keyCode))
+            }
+        } else {
+            // 非组合键模式下，正常按下-弹起
+            handler.handle(KeyboardEvent.KeyDown(keyCode))
+            handler.handle(KeyboardEvent.KeyUp(keyCode))
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -536,13 +598,24 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
         // 页面切换标签
         Row(
             modifier = Modifier.fillMaxWidth().height(36.dp),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 组合键模式选择框
+            Checkbox(
+                checked = comboKeyMode,
+                onCheckedChange = onComboKeyModeChange,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("组合键", fontSize = 10.sp, color = Color.Gray)
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
             TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(0) } }, modifier = Modifier.height(36.dp)) {
                 Text("字母数字", fontSize = 12.sp, color = if (pagerState.currentPage == 0) Color(0xFF2196F3) else Color.Gray)
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             TextButton(onClick = { scope.launch { pagerState.animateScrollToPage(1) } }, modifier = Modifier.height(36.dp)) {
                 Text("符号功能", fontSize = 12.sp, color = if (pagerState.currentPage == 1) Color(0xFF2196F3) else Color.Gray)
             }
@@ -559,56 +632,56 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
                     // 第一页：数字与字母
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                         
-                        (1..9).forEach { i -> ComputerKey(text = "$i", size = smallKeySize, onClick = { actions.keyDown(0x30 + i); actions.keyUp(0x30 + i) }) }
-                        ComputerKey(text = "0", size = smallKeySize, onClick = { actions.keyDown(0x30); actions.keyUp(0x30) })
-                        ComputerKey(text = "Back", size = smallKeySize * 1.5f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
+                        (1..9).forEach { i -> ComputerKey(text = "$i", size = smallKeySize, onClick = { sendKey(0x30 + i) }) }
+                        ComputerKey(text = "0", size = smallKeySize, onClick = { sendKey(0x30) })
+                        ComputerKey(text = "Back", size = smallKeySize * 1.5f, onClick = { sendKey(0x08) })
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                         
-                        listOf('Q','W','E','R','T','Y','U','I','O','P').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        listOf('Q','W','E','R','T','Y','U','I','O','P').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { sendKey(c.code) }) }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(modifier = Modifier.width(smallKeySize * 0.5f))
-                        listOf('A','S','D','F','G','H','J','K','L').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        listOf('A','S','D','F','G','H','J','K','L').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { sendKey(c.code) }) }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        ComputerKey(text = "Shift", size = smallKeySize * 1.6f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
-                        listOf('Z','X','C','V','B','N','M').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
-                        ComputerKey(text = "Enter", size = smallKeySize * 1.6f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
+                        ComputerKey(text = "Shift", size = smallKeySize * 1.6f, onClick = { toggleModifierKey(0x10) }, isPressed = 0x10 in modifierKeysState)
+                        listOf('Z','X','C','V','B','N','M').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { sendKey(c.code) }) }
+                        ComputerKey(text = "Enter", size = smallKeySize * 1.6f, onClick = { sendKey(0x0D) })
                         
                     }
                 } else {
                     // 第二页：功能键与符号
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        ComputerKey(text = "Esc", size = smallKeySize, onClick = { actions.keyDown(0x1B); actions.keyUp(0x1B) })
-                        (1..8).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { actions.keyDown(0x6F + i); actions.keyUp(0x6F + i) }) }
-                        ComputerKey(text = "Del", size = smallKeySize, onClick = { actions.keyDown(0x2E); actions.keyUp(0x2E) })
+                        ComputerKey(text = "Esc", size = smallKeySize, onClick = { sendKey(0x1B) })
+                        (1..8).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { sendKey(0x6F + i) }) }
+                        ComputerKey(text = "Del", size = smallKeySize, onClick = { sendKey(0x2E) })
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        (9..12).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { actions.keyDown(0x6F + i); actions.keyUp(0x6F + i) }) }
-                        ComputerKey(text = "`~", size = smallKeySize, onClick = { actions.keyDown(0xC0); actions.keyUp(0xC0) })
-                        ComputerKey(text = "-_", size = smallKeySize, onClick = { actions.keyDown(0xBD); actions.keyUp(0xBD) })
-                        ComputerKey(text = "=+", size = smallKeySize, onClick = { actions.keyDown(0xBB); actions.keyUp(0xBB) })
-                        ComputerKey(text = "[{", size = smallKeySize, onClick = { actions.keyDown(0xDB); actions.keyUp(0xDB) })
-                        ComputerKey(text = "}]", size = smallKeySize, onClick = { actions.keyDown(0xDD); actions.keyUp(0xDD) })
-                        ComputerKey(text = "\\|", size = smallKeySize, onClick = { actions.keyDown(0xDC); actions.keyUp(0xDC) })
+                        (9..12).forEach { i -> ComputerKey(text = "F$i", size = smallKeySize, onClick = { sendKey(0x6F + i) }) }
+                        ComputerKey(text = "`~", size = smallKeySize, onClick = { sendKey(0xC0) })
+                        ComputerKey(text = "-_", size = smallKeySize, onClick = { sendKey(0xBD) })
+                        ComputerKey(text = "=+", size = smallKeySize, onClick = { sendKey(0xBB) })
+                        ComputerKey(text = "[{", size = smallKeySize, onClick = { sendKey(0xDB) })
+                        ComputerKey(text = "}]", size = smallKeySize, onClick = { sendKey(0xDD) })
+                        ComputerKey(text = "\\|", size = smallKeySize, onClick = { sendKey(0xDC) })
                         
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        listOf('!','@','#','$','%','^','&','*','(',')').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { actions.keyDown(c.code); actions.keyUp(c.code) }) }
+                        listOf('!','@','#','$','%','^','&','*','(',')').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { sendKey(c.code) }) }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        ComputerKey(text = ";:", size = smallKeySize, onClick = { actions.keyDown(0xBA); actions.keyUp(0xBA) })
-                        ComputerKey(text = "'\"", size = smallKeySize, onClick = { actions.keyDown(0xDE); actions.keyUp(0xDE) })
-                        ComputerKey(text = ",<", size = smallKeySize, onClick = { actions.keyDown(0xBC); actions.keyUp(0xBC) })
-                        ComputerKey(text = ".>", size = smallKeySize, onClick = { actions.keyDown(0xBE); actions.keyUp(0xBE) })
-                        ComputerKey(text = "/?", size = smallKeySize, onClick = { actions.keyDown(0xBF); actions.keyUp(0xBF) })
+                        ComputerKey(text = ";:", size = smallKeySize, onClick = { sendKey(0xBA) })
+                        ComputerKey(text = "'\"", size = smallKeySize, onClick = { sendKey(0xDE) })
+                        ComputerKey(text = ",<", size = smallKeySize, onClick = { sendKey(0xBC) })
+                        ComputerKey(text = ".>", size = smallKeySize, onClick = { sendKey(0xBE) })
+                        ComputerKey(text = "/?", size = smallKeySize, onClick = { sendKey(0xBF) })
                     }
                     
                 }
@@ -616,25 +689,25 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
                 // 公共底部控制行
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
                     
-                    ComputerKey(text = "Esc", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x1B); actions.keyUp(0x1B) })
-                    ComputerKey(text = "Tab", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x09); actions.keyUp(0x09) })
-                    ComputerKey(text = "Caps", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x14); actions.keyUp(0x14) })
-                    ComputerKey(text = "Shift", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x10); actions.keyUp(0x10) })
-                    ComputerKey(text = "Enter", size = smallKeySize * 1.44f, onClick = { actions.keyDown(0x0D); actions.keyUp(0x0D) })
-                    ComputerKey(text = "Del", size = smallKeySize, onClick = { actions.keyDown(0x2E); actions.keyUp(0x2E) })
-                    ComputerKey(text = "↑", size = smallKeySize, onClick = { actions.keyDown(0x26); actions.keyUp(0x26) })
-                    ComputerKey(text = "Back", size = smallKeySize * 1.0f, onClick = { actions.keyDown(0x08); actions.keyUp(0x08) })
+                    ComputerKey(text = "Esc", size = smallKeySize * 1.44f, onClick = { sendKey(0x1B) })
+                    ComputerKey(text = "Tab", size = smallKeySize * 1.44f, onClick = { sendKey(0x09) })
+                    ComputerKey(text = "Caps", size = smallKeySize * 1.44f, onClick = { sendKey(0x14) })
+                    ComputerKey(text = "Shift", size = smallKeySize * 1.44f, onClick = { toggleModifierKey(0x10) }, isPressed = 0x10 in modifierKeysState)
+                    ComputerKey(text = "Enter", size = smallKeySize * 1.44f, onClick = { sendKey(0x0D) })
+                    ComputerKey(text = "Del", size = smallKeySize, onClick = { sendKey(0x2E) })
+                    ComputerKey(text = "↑", size = smallKeySize, onClick = { sendKey(0x26) })
+                    ComputerKey(text = "Back", size = smallKeySize * 1.0f, onClick = { sendKey(0x08) })
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                    ComputerKey(text = "Ctrl", size = smallKeySize, onClick = { actions.keyDown(0x11); actions.keyUp(0x11) })
-                    ComputerKey(text = "Win", size = smallKeySize, onClick = { actions.keyDown(0x5B); actions.keyUp(0x5B) })
-                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { actions.keyDown(0x12); actions.keyUp(0x12) })
-                    ComputerKey(text = "Space", size = smallKeySize * 3.2f, onClick = { actions.keyDown(0x20); actions.keyUp(0x20) })
-                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { actions.keyDown(0x12); actions.keyUp(0x12) })
-                    ComputerKey(text = "←", size = smallKeySize, onClick = { actions.keyDown(0x25); actions.keyUp(0x25) })
-                    ComputerKey(text = "↓", size = smallKeySize, onClick = { actions.keyDown(0x28); actions.keyUp(0x28) })
-                    ComputerKey(text = "→", size = smallKeySize, onClick = { actions.keyDown(0x27); actions.keyUp(0x27) })
+                    ComputerKey(text = "Ctrl", size = smallKeySize, onClick = { toggleModifierKey(0x11) }, isPressed = 0x11 in modifierKeysState)
+                    ComputerKey(text = "Win", size = smallKeySize, onClick = { toggleModifierKey(0x5B) }, isPressed = 0x5B in modifierKeysState)
+                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { toggleModifierKey(0x12) }, isPressed = 0x12 in modifierKeysState)
+                    ComputerKey(text = "Space", size = smallKeySize * 3.2f, onClick = { sendKey(0x20) })
+                    ComputerKey(text = "Alt", size = smallKeySize, onClick = { toggleModifierKey(0x12) }, isPressed = 0x12 in modifierKeysState)
+                    ComputerKey(text = "←", size = smallKeySize, onClick = { sendKey(0x25) })
+                    ComputerKey(text = "↓", size = smallKeySize, onClick = { sendKey(0x28) })
+                    ComputerKey(text = "→", size = smallKeySize, onClick = { sendKey(0x27) })
                 }
             }
         }
@@ -645,7 +718,8 @@ fun ComputerKeyboard(actions: MouseActions, keyboardHeight: Dp = 250.dp) {
 fun ComputerKey(
     text: String,
     size: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isPressed: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Button(
@@ -655,8 +729,8 @@ fun ComputerKey(
             .fillMaxHeight(),
         shape = RoundedCornerShape(4.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = Color.Black
+            containerColor = if (isPressed) Color(0xFF2196F3) else Color.White,
+            contentColor = if (isPressed) Color.White else Color.Black
         ),
         elevation = null,
         interactionSource = interactionSource,
