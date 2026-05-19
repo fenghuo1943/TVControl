@@ -46,7 +46,7 @@ class InputController(
                         if (comboKeyMode && activeModifiers.isNotEmpty()) {
                             val modifier = calculateModifier()
                             sender.keyDown(event.keyCode, modifier)
-                            activeModifiers.clear()
+                            //activeModifiers.clear()
                         } else {
                             sender.keyDown(event.keyCode)
                         }

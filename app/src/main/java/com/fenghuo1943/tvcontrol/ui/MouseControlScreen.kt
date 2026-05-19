@@ -61,6 +61,12 @@ fun MouseControlScreen(
     var requestKeyboard by remember { mutableStateOf(false) }
     var comboKeyMode by remember { mutableStateOf(false) }
     
+    // 监听 comboKeyMode 变化，立即同步到 InputController
+    LaunchedEffect(comboKeyMode) {
+        Log.d("TV", "Syncing comboKeyMode to InputController: $comboKeyMode")
+        handler.comboKeyMode = comboKeyMode
+    }
+    
     // 键盘高度配置
     val customKeyboardHeight = 250.dp // 自定义键盘固定高度
     var systemKeyboardHeight by remember { mutableStateOf<Dp?>(null) } // 系统键盘高度（动态检测，用于日志）
@@ -224,7 +230,10 @@ fun MouseControlScreen(
                             actions = actions, 
                             keyboardHeight = customKeyboardHeight, 
                             comboKeyMode = comboKeyMode, 
-                            onComboKeyModeChange = { comboKeyMode = it }
+                            onComboKeyModeChange = { newValue ->
+                                Log.d("TV", "Combo key mode changed from $comboKeyMode to $newValue")
+                                comboKeyMode = newValue
+                            }
                         )
                     }
                 }
@@ -254,7 +263,6 @@ fun MouseControlScreen(
                 requestFocus = requestKeyboard,
                 onTextChange = { run { textInput = it } },
                 onEvent = { 
-                    handler.comboKeyMode = comboKeyMode
                     handler.handle(it) 
                 },
                 onFocusHandled = { }
@@ -547,6 +555,7 @@ fun ComputerKeyboard(
     
     // 当组合键模式关闭时，清除所有修饰键状态
     LaunchedEffect(comboKeyMode) {
+        Log.d("TV", "ComputerKeyboard LaunchedEffect: comboKeyMode = $comboKeyMode, modifierKeysState = $modifierKeysState")
         if (!comboKeyMode && modifierKeysState.isNotEmpty()) {
             // 发送所有修饰键的弹起事件
             modifierKeysState.forEach { keyCode ->
@@ -604,7 +613,9 @@ fun ComputerKeyboard(
             // 组合键模式选择框
             Checkbox(
                 checked = comboKeyMode,
-                onCheckedChange = onComboKeyModeChange,
+                onCheckedChange = { newValue ->
+                    onComboKeyModeChange(newValue)
+                },
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -673,7 +684,47 @@ fun ComputerKeyboard(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
-                        listOf('!','@','#','$','%','^','&','*','(',')').forEach { c -> ComputerKey(text = c.toString(), size = smallKeySize, onClick = { sendKey(c.code) }) }
+                        listOf('!','@','#','$','%','^','&','*','(',')').forEach { c -> 
+                            val vkCode = when(c) {
+                                '!' -> 0x31 // Shift+1
+                                '@' -> 0x32 // Shift+2
+                                '#' -> 0x33 // Shift+3
+                                '$' -> 0x34 // Shift+4
+                                '%' -> 0x35 // Shift+5
+                                '^' -> 0x36 // Shift+6
+                                '&' -> 0x37 // Shift+7
+                                '*' -> 0x38 // Shift+8
+                                '(' -> 0x39 // Shift+9
+                                ')' -> 0x30 // Shift+0
+                                else -> c.code
+                            }
+                            ComputerKey(text = c.toString(), size = smallKeySize, onClick = { 
+                                // 这些符号需要Shift键配合
+                                if (comboKeyMode) {
+                                    // 在组合键模式下，先清除所有其他修饰键
+                                    modifierKeysState.forEach { keyCode ->
+                                        handler.handle(KeyboardEvent.KeyUp(keyCode))
+                                    }
+                                    modifierKeysState = emptySet()
+                                    
+                                    // 然后按下Shift
+                                    handler.handle(KeyboardEvent.KeyDown(0x10))
+                                    
+                                    // 发送数字键
+                                    handler.handle(KeyboardEvent.KeyDown(vkCode))
+                                    handler.handle(KeyboardEvent.KeyUp(vkCode))
+                                    
+                                    // 释放Shift
+                                    handler.handle(KeyboardEvent.KeyUp(0x10))
+                                } else {
+                                    // 非组合键模式，发送Shift+键
+                                    handler.handle(KeyboardEvent.KeyDown(0x10)) // Shift down
+                                    handler.handle(KeyboardEvent.KeyDown(vkCode))
+                                    handler.handle(KeyboardEvent.KeyUp(vkCode))
+                                    handler.handle(KeyboardEvent.KeyUp(0x10)) // Shift up
+                                }
+                            }) 
+                        }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(smallKeySize * 0.8f), verticalAlignment = Alignment.CenterVertically) {
