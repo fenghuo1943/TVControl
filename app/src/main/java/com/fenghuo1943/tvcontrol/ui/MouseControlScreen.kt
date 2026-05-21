@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -311,6 +312,7 @@ fun MouseTouchArea(
 @Composable
 fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
     var pressedButtons by remember { mutableStateOf(setOf<MouseButton>()) }
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
@@ -318,9 +320,11 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
         MouseButtonItem(
             text="左键",
             pressed = MouseButton.Left in pressedButtons,
-            onDown = {pressedButtons = pressedButtons + MouseButton.Left
-            actions.down((MouseButton.Left))
-        },
+            onDown = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                pressedButtons = pressedButtons + MouseButton.Left
+                actions.down((MouseButton.Left))
+            },
             onUp = {
                 pressedButtons = pressedButtons - MouseButton.Left
                 actions.up(MouseButton.Left)
@@ -328,6 +332,7 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
         MouseButtonItem(text = "中键",
             pressed = MouseButton.Middle in pressedButtons,
             onDown = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 pressedButtons = pressedButtons - MouseButton.Middle
                 actions.down(MouseButton.Middle)
             },
@@ -340,6 +345,7 @@ fun MouseButtons(modifier: Modifier = Modifier,actions: MouseActions) {
             text = "右键",
             pressed = MouseButton.Right in pressedButtons,
             onDown = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 pressedButtons = pressedButtons - MouseButton.Right
                 actions.down(MouseButton.Right)
             },
@@ -393,6 +399,7 @@ fun KeyboardControlBar(
     onSystemKeyboard: () -> Unit,
     onComputerKeyboard: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -400,7 +407,10 @@ fun KeyboardControlBar(
     ) {
         // ⌨️ 系统键盘按钮
         Button(
-            onClick = onSystemKeyboard,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onSystemKeyboard()
+            },
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2196F3) // 蓝色背景
@@ -411,7 +421,10 @@ fun KeyboardControlBar(
         Spacer(modifier = Modifier.width(8.dp))
         // 💻 电脑键盘按钮
         Button(
-            onClick = onComputerKeyboard,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onComputerKeyboard()
+            },
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2196F3) // 蓝色背景
@@ -422,7 +435,10 @@ fun KeyboardControlBar(
         Spacer(modifier = Modifier.width(8.dp))
         // 🎮 遥控器按钮
         Button(
-            onClick = onCustomKeyboard,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onCustomKeyboard()
+            },
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2196F3) // 蓝色背景
@@ -783,6 +799,7 @@ fun ComputerKey(
     onClick: () -> Unit,
     isPressed: Boolean = false
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .width(size)
@@ -792,7 +809,10 @@ fun ComputerKey(
                 RoundedCornerShape(4.dp)
             )
             .clickable(
-                onClick = onClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ),
@@ -873,6 +893,7 @@ fun RemoteAppSelectorButton(
     accentColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     val backgroundColor = if (isSelected) accentColor else Color.White
     val textColor = if (isSelected) Color.White else iconColor
     val borderColor = if (isSelected) accentColor else Color.Gray.copy(alpha = 0.3f)
@@ -884,7 +905,10 @@ fun RemoteAppSelectorButton(
             .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .background(backgroundColor, RoundedCornerShape(20.dp))
             .clickable(
-                onClick = onClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ),
@@ -992,13 +1016,17 @@ fun RemoteFunctionKeyButton(
     accentColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .border(0.5.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
             .background(Color.White, RoundedCornerShape(6.dp))
             .clickable(
-                onClick = onClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ),

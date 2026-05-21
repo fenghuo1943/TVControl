@@ -26,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,6 +116,7 @@ fun RemoteControlPad(
     accentColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     val padSize = 280.dp
     val innerCircleSize = 100.dp
     val scope = rememberCoroutineScope()
@@ -186,6 +189,7 @@ fun RemoteControlPad(
                     }
                     .pointerInput(Unit) {
                         detectTapGestures { offset ->
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             // 计算相对于中心的坐标
                             val centerX = padSize.toPx() / 2
                             val centerY = padSize.toPx() / 2
@@ -319,6 +323,7 @@ fun BottomNavigationBar(
     backgroundColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -333,6 +338,7 @@ fun BottomNavigationBar(
             modifier = Modifier
                 .size(48.dp)
                 .clickable { 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     handler.handle(KeyboardEvent.KeyDown(0x5D))
                     handler.handle(KeyboardEvent.KeyUp(0x5D))
                 },
@@ -368,6 +374,7 @@ fun BottomNavigationBar(
             modifier = Modifier
                 .size(48.dp)
                 .clickable { 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     handler.handle(KeyboardEvent.KeyDown(0x1B))
                     handler.handle(KeyboardEvent.KeyUp(0x1B))
                 },
@@ -385,6 +392,7 @@ fun BottomNavigationBar(
             modifier = Modifier
                 .size(48.dp)
                 .clickable { 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     handler.handle(KeyboardEvent.KeyDown(0x1B))
                     handler.handle(KeyboardEvent.KeyUp(0x1B))
                 },
@@ -462,6 +470,7 @@ fun AppSelectorButton(
     accentColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     val backgroundColor = if (isSelected) accentColor else Color.White
     val textColor = if (isSelected) Color.White else iconColor
     val borderColor = if (isSelected) accentColor else Color.Gray.copy(alpha = 0.3f)
@@ -472,7 +481,14 @@ fun AppSelectorButton(
             .height(40.dp)
             .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .background(backgroundColor, RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -575,12 +591,20 @@ fun FunctionKeyButton(
     accentColor: Color,
     iconColor: Color
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .border(0.5.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
             .background(Color.White, RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
