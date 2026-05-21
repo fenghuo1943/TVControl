@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -471,8 +473,25 @@ fun AppSelectorButton(
     iconColor: Color
 ) {
     val haptic = LocalHapticFeedback.current
-    val backgroundColor = if (isSelected) accentColor else Color.White
-    val textColor = if (isSelected) Color.White else iconColor
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isPressed = true
+                is PressInteraction.Release -> isPressed = false
+                is PressInteraction.Cancel -> isPressed = false
+            }
+        }
+    }
+    
+    val backgroundColor = when {
+        isPressed -> accentColor.copy(alpha = 0.7f)
+        isSelected -> accentColor
+        else -> Color.White
+    }
+    val textColor = if (isSelected || isPressed) Color.White else iconColor
     val borderColor = if (isSelected) accentColor else Color.Gray.copy(alpha = 0.3f)
     
     Box(
@@ -487,7 +506,7 @@ fun AppSelectorButton(
                     onClick()
                 },
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -592,18 +611,34 @@ fun FunctionKeyButton(
     iconColor: Color
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isPressed = true
+                is PressInteraction.Release -> isPressed = false
+                is PressInteraction.Cancel -> isPressed = false
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .border(0.5.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-            .background(Color.White, RoundedCornerShape(6.dp))
+            .background(
+                if (isPressed) Color(0xFFF0F0F0) else Color.White,
+                RoundedCornerShape(6.dp)
+            )
             .clickable(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onClick()
                 },
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ),
         contentAlignment = Alignment.Center
     ) {

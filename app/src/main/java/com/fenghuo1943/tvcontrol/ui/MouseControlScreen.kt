@@ -7,9 +7,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -224,7 +225,11 @@ fun MouseControlScreen(
                             .fillMaxWidth()
                             .height(customKeyboardHeight)
                     ) {
-                        RemoteControlPanel(actions = actions, keyboardHeight = customKeyboardHeight)
+                        RemoteControlPanel(
+                            actions = actions,
+                            keyboardHeight = customKeyboardHeight,
+                            onClose = { showCustomKeyboard = false }
+                        )
                     }
                 }
             }
@@ -363,11 +368,24 @@ fun MouseButtonItem(
     onDown: () -> Unit,
     onUp: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isPressed = true
+                is PressInteraction.Release -> isPressed = false
+                is PressInteraction.Cancel -> isPressed = false
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .size(100.dp, 50.dp)
             .background(
-                if (pressed) Color.DarkGray else Color.Gray,
+                if (pressed || isPressed) Color.DarkGray else Color.Gray,
                 RoundedCornerShape(8.dp)
             )
             .pointerInput(Unit) {
@@ -800,12 +818,25 @@ fun ComputerKey(
     isPressed: Boolean = false
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    var isClicked by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isClicked = true
+                is PressInteraction.Release -> isClicked = false
+                is PressInteraction.Cancel -> isClicked = false
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .width(size)
             .fillMaxHeight()
             .background(
-                if (isPressed) Color(0xFF2196F3) else Color.White,
+                if (isPressed || isClicked) Color(0xFF2196F3) else Color.White,
                 RoundedCornerShape(4.dp)
             )
             .clickable(
@@ -814,14 +845,14 @@ fun ComputerKey(
                     onClick()
                 },
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             fontSize = 12.sp,
-            color = if (isPressed) Color.White else Color.Black,
+            color = if (isPressed || isClicked) Color.White else Color.Black,
             maxLines = 1
         )
     }
@@ -830,9 +861,11 @@ fun ComputerKey(
 @Composable
 fun RemoteControlPanel(
     actions: MouseActions,
-    keyboardHeight: Dp = 300.dp
+    keyboardHeight: Dp = 300.dp,
+    onClose: () -> Unit = {}
 ) {
     var selectedApp by remember { mutableStateOf("电视") }
+    val haptic = LocalHapticFeedback.current
     
     // 浅色主题颜色（与遥控器界面一致）
     val accentColor = Color(0xFF4CAF50) // 绿色箭头
@@ -845,12 +878,13 @@ fun RemoteControlPanel(
             .background(Color.White, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(16.dp)
     ) {
-        // 第一部分：应用选择器（电视、游戏、视频）
+        // 第一部分：应用选择器（电视、游戏、视频）+ 关闭按钮
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             RemoteAppSelectorButton(
                 text = "电视",
@@ -873,6 +907,30 @@ fun RemoteControlPanel(
                 accentColor = accentColor,
                 iconColor = iconColor
             )
+            // 关闭按钮
+            Box(
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(40.dp)
+                    .border(1.dp, Color.Red.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                    .background(Color.Red.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+                    .clickable(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onClose()
+                        },
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "关闭",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
+            }
         }
         
         // 第二部分：功能按键网格容器
@@ -894,8 +952,25 @@ fun RemoteAppSelectorButton(
     iconColor: Color
 ) {
     val haptic = LocalHapticFeedback.current
-    val backgroundColor = if (isSelected) accentColor else Color.White
-    val textColor = if (isSelected) Color.White else iconColor
+    val interactionSource = remember { MutableInteractionSource() }
+    var isClicked by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isClicked = true
+                is PressInteraction.Release -> isClicked = false
+                is PressInteraction.Cancel -> isClicked = false
+            }
+        }
+    }
+    
+    val backgroundColor = when {
+        isClicked -> accentColor.copy(alpha = 0.7f)
+        isSelected -> accentColor
+        else -> Color.White
+    }
+    val textColor = if (isSelected || isClicked) Color.White else iconColor
     val borderColor = if (isSelected) accentColor else Color.Gray.copy(alpha = 0.3f)
     
     Box(
@@ -910,7 +985,7 @@ fun RemoteAppSelectorButton(
                     onClick()
                 },
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -1017,18 +1092,34 @@ fun RemoteFunctionKeyButton(
     iconColor: Color
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    var isClicked by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> isClicked = true
+                is PressInteraction.Release -> isClicked = false
+                is PressInteraction.Cancel -> isClicked = false
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .border(0.5.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-            .background(Color.White, RoundedCornerShape(6.dp))
+            .background(
+                if (isClicked) Color(0xFFF0F0F0) else Color.White,
+                RoundedCornerShape(6.dp)
+            )
             .clickable(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onClick()
                 },
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ),
         contentAlignment = Alignment.Center
     ) {
