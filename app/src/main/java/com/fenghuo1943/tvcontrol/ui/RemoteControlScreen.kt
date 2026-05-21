@@ -3,6 +3,9 @@ package com.fenghuo1943.tvcontrol.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -15,7 +18,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -84,6 +89,10 @@ fun RemoteControlPad(
 ) {
     val padSize = 280.dp
     val innerCircleSize = 100.dp
+    val scope = rememberCoroutineScope()
+    
+    // 滑动阈值（像素）
+    val swipeThreshold = 30f
     
     Box(
         modifier = modifier
@@ -95,24 +104,121 @@ fun RemoteControlPad(
             modifier = Modifier.size(padSize),
             contentAlignment = Alignment.Center
         ) {
-            // 外圆 - 细线边框
+            // 外圆 - 细线边框 + 滑动手势和点击检测
             Box(
                 modifier = Modifier
                     .size(padSize)
                     .border(1.5.dp, accentColor.copy(alpha = 0.4f), CircleShape)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                // 滑动结束，不执行操作
+                            }
+                        ) { change, dragAmount ->
+                            // 垂直滑动检测
+                            if (Math.abs(dragAmount) > swipeThreshold) {
+                                if (dragAmount < 0) {
+                                    // 向上滑动 - 发送上键
+                                    scope.launch {
+                                        handler.handle(KeyboardEvent.KeyDown(0x26))
+                                        handler.handle(KeyboardEvent.KeyUp(0x26))
+                                    }
+                                } else {
+                                    // 向下滑动 - 发送下键
+                                    scope.launch {
+                                        handler.handle(KeyboardEvent.KeyDown(0x28))
+                                        handler.handle(KeyboardEvent.KeyUp(0x28))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                // 滑动结束，不执行操作
+                            }
+                        ) { change, dragAmount ->
+                            // 水平滑动检测
+                            if (Math.abs(dragAmount) > swipeThreshold) {
+                                if (dragAmount < 0) {
+                                    // 向左滑动 - 发送左键
+                                    scope.launch {
+                                        handler.handle(KeyboardEvent.KeyDown(0x25))
+                                        handler.handle(KeyboardEvent.KeyUp(0x25))
+                                    }
+                                } else {
+                                    // 向右滑动 - 发送右键
+                                    scope.launch {
+                                        handler.handle(KeyboardEvent.KeyDown(0x27))
+                                        handler.handle(KeyboardEvent.KeyUp(0x27))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            // 计算相对于中心的坐标
+                            val centerX = padSize.toPx() / 2
+                            val centerY = padSize.toPx() / 2
+                            val x = offset.x - centerX
+                            val y = offset.y - centerY
+                            
+                            // 内圆半径（OK键区域）
+                            val innerRadius = innerCircleSize.toPx() / 2
+                            
+                            // 判断是否在内圆（OK键）
+                            if (x * x + y * y < innerRadius * innerRadius) {
+                                // OK键
+                                scope.launch {
+                                    handler.handle(KeyboardEvent.KeyDown(0x0D))
+                                    handler.handle(KeyboardEvent.KeyUp(0x0D))
+                                }
+                            } else {
+                                // 判断方向（根据角度）
+                                val angle = Math.atan2(y.toDouble(), x.toDouble())
+                                val degrees = Math.toDegrees(angle)
+                                
+                                when {
+                                    degrees < -45 && degrees > -135 -> {
+                                        // 上键
+                                        scope.launch {
+                                            handler.handle(KeyboardEvent.KeyDown(0x26))
+                                            handler.handle(KeyboardEvent.KeyUp(0x26))
+                                        }
+                                    }
+                                    degrees > 45 && degrees < 135 -> {
+                                        // 下键
+                                        scope.launch {
+                                            handler.handle(KeyboardEvent.KeyDown(0x28))
+                                            handler.handle(KeyboardEvent.KeyUp(0x28))
+                                        }
+                                    }
+                                    (degrees >= -45 && degrees <= 45) -> {
+                                        // 右键
+                                        scope.launch {
+                                            handler.handle(KeyboardEvent.KeyDown(0x27))
+                                            handler.handle(KeyboardEvent.KeyUp(0x27))
+                                        }
+                                    }
+                                    else -> {
+                                        // 左键 (degrees <= -135 || degrees >= 135)
+                                        scope.launch {
+                                            handler.handle(KeyboardEvent.KeyDown(0x25))
+                                            handler.handle(KeyboardEvent.KeyUp(0x25))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
             )
             
-            // 上键
+            // 方向键图标显示（仅用于视觉，点击由外层Box处理）
+            // 上键图标
             Box(
-                modifier = Modifier
-                    .size(padSize)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { 
-                        handler.handle(KeyboardEvent.KeyDown(0x26))
-                        handler.handle(KeyboardEvent.KeyUp(0x26))
-                    },
+                modifier = Modifier.size(padSize),
                 contentAlignment = Alignment.TopCenter
             ) {
                 Text(
@@ -123,17 +229,9 @@ fun RemoteControlPad(
                 )
             }
             
-            // 下键
+            // 下键图标
             Box(
-                modifier = Modifier
-                    .size(padSize)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { 
-                        handler.handle(KeyboardEvent.KeyDown(0x28))
-                        handler.handle(KeyboardEvent.KeyUp(0x28))
-                    },
+                modifier = Modifier.size(padSize),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Text(
@@ -144,17 +242,9 @@ fun RemoteControlPad(
                 )
             }
             
-            // 左键
+            // 左键图标
             Box(
-                modifier = Modifier
-                    .size(padSize)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { 
-                        handler.handle(KeyboardEvent.KeyDown(0x25))
-                        handler.handle(KeyboardEvent.KeyUp(0x25))
-                    },
+                modifier = Modifier.size(padSize),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Text(
@@ -165,17 +255,9 @@ fun RemoteControlPad(
                 )
             }
             
-            // 右键
+            // 右键图标
             Box(
-                modifier = Modifier
-                    .size(padSize)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { 
-                        handler.handle(KeyboardEvent.KeyDown(0x27))
-                        handler.handle(KeyboardEvent.KeyUp(0x27))
-                    },
+                modifier = Modifier.size(padSize),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
@@ -186,18 +268,11 @@ fun RemoteControlPad(
                 )
             }
             
-            // 内圆 - OK键
+            // 内圆 - OK键（仅用于视觉，点击由外层Box处理）
             Box(
                 modifier = Modifier
                     .size(innerCircleSize)
-                    .background(Color(0xFF4CAF50), CircleShape)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { 
-                        handler.handle(KeyboardEvent.KeyDown(0x0D))
-                        handler.handle(KeyboardEvent.KeyUp(0x0D))
-                    },
+                    .background(Color(0xFF4CAF50), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -266,8 +341,8 @@ fun BottomNavigationBar(
             modifier = Modifier
                 .size(48.dp)
                 .clickable { 
-                    handler.handle(KeyboardEvent.KeyDown(0x5B))
-                    handler.handle(KeyboardEvent.KeyUp(0x5B))
+                    handler.handle(KeyboardEvent.KeyDown(0x1B)))
+                    handler.handle(KeyboardEvent.KeyUp(0x1B))
                 },
             contentAlignment = Alignment.Center
         ) {
