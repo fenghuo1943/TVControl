@@ -30,10 +30,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.fenghuo1943.tvcontrol.MainViewModel
 import com.fenghuo1943.tvcontrol.input.InputController
 import com.fenghuo1943.tvcontrol.protocol.MouseActionsImpl
+import com.fenghuo1943.tvcontrol.ui.common.ConnectionStatus
 import com.fenghuo1943.tvcontrol.ui.common.StatusBarStyle
 import kotlinx.coroutines.launch
 
@@ -42,6 +44,7 @@ fun RemoteControlScreen(
     modifier: Modifier = Modifier,
     vm: MainViewModel = hiltViewModel()
 ) {
+    val state by vm::connectionState
     val scope = rememberCoroutineScope()
     val handler = remember(vm) { InputController(vm.inputSender, scope) }
     val actions = remember(vm) { MouseActionsImpl(vm) }
@@ -59,6 +62,17 @@ fun RemoteControlScreen(
             .background(backgroundColor)
             .statusBarsPadding()
     ) {
+        // 右上角连接状态指示器（放在最上层）
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 12.dp)
+                .zIndex(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ConnectionStatus(state = state)
+        }
+        
         Column(
             modifier = Modifier.fillMaxSize()
         ) {

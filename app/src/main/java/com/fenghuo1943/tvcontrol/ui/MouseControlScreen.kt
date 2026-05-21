@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,12 +36,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.fenghuo1943.tvcontrol.input.GestureEngine
 import com.fenghuo1943.tvcontrol.input.InputController
 import com.fenghuo1943.tvcontrol.input.MouseActions
 import com.fenghuo1943.tvcontrol.protocol.MouseActionsImpl
 import com.fenghuo1943.tvcontrol.input.MouseButton
+import com.fenghuo1943.tvcontrol.ui.common.ConnectionStatus
 import com.fenghuo1943.tvcontrol.ui.common.StatusBarStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,6 +54,7 @@ fun MouseControlScreen(
     vm: MainViewModel = hiltViewModel()
 
 ) {
+    val state by vm::connectionState
 
     val actions = remember(vm) { MouseActionsImpl(vm) }
     var showCustomKeyboard by remember { mutableStateOf(false) }
@@ -116,6 +120,17 @@ fun MouseControlScreen(
             .statusBarsPadding()
             .background(Color(0xFFF0F0F0))
     ) {
+        // 右上角连接状态指示器（放在最上层）
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 14.dp)
+                .zIndex(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ConnectionStatus(state = state)
+        }
+        
         // 主要内容区域（固定布局）
         Column(
             modifier = Modifier

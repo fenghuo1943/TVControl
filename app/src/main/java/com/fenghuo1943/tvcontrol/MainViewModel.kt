@@ -109,10 +109,10 @@ class MainViewModel @Inject constructor(
                             discovery.saveLastDevice(device)
                             ip = actualIp
                             Log.d("TV", "Connected to $ip")
-                            SnackbarManager.show(
+                            /* SnackbarManager.show(
                                 "已连接 $actualIp",
                                 SnackbarType.SUCCESS
-                            )
+                            ) */
                         }
                         
                         // 清空连接状态
@@ -130,10 +130,10 @@ class MainViewModel @Inject constructor(
                         }
 
                         if (isManualDisconnect) {
-                            SnackbarManager.show(
+                            /* SnackbarManager.show(
                                 "断开连接",
                                 SnackbarType.SUCCESS
-                            )
+                            ) */
                             connectionState =ConnectionState.DISCONNECTED
                             connectedIp = "" // 清空记录的IP
                             connectingIps = emptyList()
@@ -141,10 +141,10 @@ class MainViewModel @Inject constructor(
                         } else {
                             if (reconnectAttempts < maxReconnectAttempts) {
                                 reconnectAttempts++
-                                SnackbarManager.show(
+                                /* SnackbarManager.show(
                                     "连接断开，正在重连",
                                     SnackbarType.ERROR
-                                )
+                                ) */
                                 connectionState =ConnectionState.RECONNECTING
                             } else {
                                 SnackbarManager.show(
