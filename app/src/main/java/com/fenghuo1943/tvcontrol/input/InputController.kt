@@ -1,5 +1,6 @@
 package com.fenghuo1943.tvcontrol.input
 
+import android.util.Log
 import com.fenghuo1943.tvcontrol.ui.KeyboardEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -34,7 +35,13 @@ class InputController(
             }
 
             is KeyboardEvent.KeyDown -> {
-                if (comboKeyMode && event.keyCode in modifierKeys) {
+                // 如果event中直接指定了modifier，优先使用
+                if (event.modifier != 0) {
+                    // 直接使用event中的modifier
+                    if (pressedKeys.add(event.keyCode)) {
+                        sender.keyDown(event.keyCode, event.modifier)
+                    }
+                } else if (comboKeyMode && event.keyCode in modifierKeys) {
                     // 组合键模式下，修饰键只记录状态，不发送
                     if (activeModifiers.add(event.keyCode)) {
                         pressedKeys.add(event.keyCode)
@@ -61,7 +68,11 @@ class InputController(
             is KeyboardEvent.KeyUp -> {
                 pressedKeys.remove(event.keyCode)
                 
-                if (comboKeyMode && event.keyCode in modifierKeys) {
+                // 如果event中直接指定了modifier，优先使用
+                if (event.modifier != 0) {
+                    // 直接使用event中的modifier
+                    sender.keyUp(event.keyCode, event.modifier)
+                } else if (comboKeyMode && event.keyCode in modifierKeys) {
                     // 组合键模式下，修饰键弹起时清除状态
                     activeModifiers.remove(event.keyCode)
                 } else {
