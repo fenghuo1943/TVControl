@@ -36,6 +36,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.fenghuo1943.tvcontrol.ConnectionState
 import com.fenghuo1943.tvcontrol.MainViewModel
 import com.fenghuo1943.tvcontrol.MouseControlActivity
+import com.fenghuo1943.tvcontrol.RemoteControlActivity
 import com.fenghuo1943.tvcontrol.ui.common.StatusBarStyle
 
 @Composable
@@ -139,7 +140,7 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(20.dp))
         val features = listOf(
             Feature("🖱", "鼠标", MouseControlActivity::class.java),
-            Feature("📺", "电视时光"),
+            Feature("📺", "遥控器", RemoteControlActivity::class.java),
             Feature("🌀", "触控板"),
             Feature("⋯", "更多")
         )

@@ -101,7 +101,7 @@
             app:cardCornerRadius="16dp">
 
             <TextView
-                android:text="电视时光"
+                android:text="遥控器"
                 android:gravity="center"
                 android:textSize="18sp"
                 android:layout_width="match_parent"

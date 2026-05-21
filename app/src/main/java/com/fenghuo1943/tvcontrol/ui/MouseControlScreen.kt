@@ -412,13 +412,6 @@ fun KeyboardControlBar(
         }
     }
 }
-
-sealed class KeyboardEvent {
-    data class KeyDown(val keyCode: Int) : KeyboardEvent()
-    data class KeyUp(val keyCode: Int) : KeyboardEvent()
-
-    data class TextInput(val text: String) : KeyboardEvent()
-}
 @Composable
 fun SystemKeyboardInput(
     text: String,
