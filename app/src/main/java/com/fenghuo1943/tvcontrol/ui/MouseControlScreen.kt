@@ -702,30 +702,18 @@ fun ComputerKeyboard(
                                 else -> c.code
                             }
                             ComputerKey(text = c.toString(), size = smallKeySize, onClick = { 
-                                // 这些符号需要Shift键配合
+                                // 这些符号需要Shift键配合（Shift = 0x0004）
                                 if (comboKeyMode) {
                                     // 在组合键模式下，先清除所有其他修饰键
                                     modifierKeysState.forEach { keyCode ->
                                         handler.handle(KeyboardEvent.KeyUp(keyCode))
                                     }
                                     modifierKeysState = emptySet()
-                                    
-                                    // 然后按下Shift
-                                    handler.handle(KeyboardEvent.KeyDown(0x10))
-                                    
-                                    // 发送数字键
-                                    handler.handle(KeyboardEvent.KeyDown(vkCode))
-                                    handler.handle(KeyboardEvent.KeyUp(vkCode))
-                                    
-                                    // 释放Shift
-                                    handler.handle(KeyboardEvent.KeyUp(0x10))
-                                } else {
-                                    // 非组合键模式，发送Shift+键
-                                    handler.handle(KeyboardEvent.KeyDown(0x10)) // Shift down
-                                    handler.handle(KeyboardEvent.KeyDown(vkCode))
-                                    handler.handle(KeyboardEvent.KeyUp(vkCode))
-                                    handler.handle(KeyboardEvent.KeyUp(0x10)) // Shift up
                                 }
+                                
+                                // 使用modifier参数发送Shift+键
+                                handler.handle(KeyboardEvent.KeyDown(vkCode, 0x0004))
+                                handler.handle(KeyboardEvent.KeyUp(vkCode, 0x0004))
                             }) 
                         }
                     }
